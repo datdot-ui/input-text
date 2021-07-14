@@ -3,40 +3,64 @@ const bel = require('bel')
 const csjs = require('csjs-inject')
 // datdot-ui dependences
 const logs = require('datdot-ui-logs')
-const input = require('..')
+const i_input = require('..')
 const button = require('datdot-ui-button')
 const icon = require('datdot-ui-icon')
-const i_input = require('../src/shadow-input')
 
 function demo () {
     let recipients = []
     const log_list = logs(protocol('logs'))
     // regular
-    const text = input({name: 'text', role: 'input', type: 'text'}, protocol('text'))
-    const checkbox = input({name: 'checkbox', role: 'checkbox', type: 'checkbox'}, protocol('checkbox'))
-    // shadowDOM
-    const i_input_text = i_input({name: 'text', role: 'input', type: 'text'}, protocol('i_input_text'))
+    const text = i_input({name: 'text', role: 'input', type: 'text', value: 'hello', maxlength: 5, theme: {
+        props: {
+            // border_width: '2px',
+            // border_color: 'var(--color-blue)',
+            // border_style: 'dashed',
+            // shadow_color: 'var(--color-blue)',
+            // shadow_opacity: '.65',
+            // shadow_offset_xy: '4px 4px',
+        }
+    }}, protocol('text'))
+    const number = i_input({name: 'number', role: 'input', type: 'number', maxlength: 8, theme: {
+        props: {
+            // border_width: '2px',
+            // border_color: 'var(--color-blue)',
+            // border_style: 'dashed',
+            // shadow_color: 'var(--color-blue)',
+            // shadow_opacity: '.65',
+            // shadow_offset_xy: '4px 4px',
+        }
+    }}, protocol('number'))
+    const float_number = i_input({name: 'float number', role: 'input', type: 'number', fixed: 8, step: 0.00000001, theme: {
+        props: {
+            // border_width: '2px',
+            // border_color: 'var(--color-blue)',
+            // border_style: 'dashed',
+            // shadow_color: 'var(--color-blue)',
+            // shadow_opacity: '.65',
+            // shadow_offset_xy: '4px 4px',
+        }
+    }}, protocol('float number'))
+    const checkbox = i_input({name: 'checkbox', role: 'checkbox', type: 'checkbox'}, protocol('checkbox'))
     // content
     const content = bel`
     <div class=${css.content}>
-        <div class=${css.regular}>
-            <h1>Regular input</h1>
-            <section>
-                <h2>Type text</h2>
-                ${text}
-            </section>
-            <section>
-                <h2>Checkbox</h2>
-                ${checkbox}
-            </section>
-        </div>
-        <div class=${css.custom}>
-            <h1>Custom i-input</h1>
-            <section>
-                <h2>Type text</h2>
-                ${i_input_text()}
-            </section>
-        </div>
+        <section>
+            <h2>Text input</h2>
+            ${text}
+        </section>
+        <section>
+            <h2>Number input</h2>
+            ${number}
+        </section>
+        <section>
+            <h2>Float number input</h2>
+            ${float_number}
+        </section>
+        <section>
+            <h2>Checkbox</h2>
+            ${checkbox}
+        </section>
     </div>
     `
     const container = bel`<div class="${css.container}">${content}</div>`
@@ -188,6 +212,21 @@ body {
     height: 100%;
     overflow: hidden auto;
 }
+/*
+.col2 {
+    display: grid;
+    grid-template-columns: 1fr 30px;
+    align-items: center;
+    grid-column-gap: 2px;
+}
+.col2 i-input {
+    grid-column-start: 1;
+}
+.col2 span {
+    grid-column-start: 2;
+    justify-self: center;
+}
+*/
 @media (max-width: 768px) {
     [data-state="debug"] {
         grid-template-rows: 65% 35%;
