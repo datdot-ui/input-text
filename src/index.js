@@ -30,46 +30,23 @@ function i_input (option, protocol) {
             input.onkeypress = (e) => handle_normal_pressed(e, input)
         }
         // float number
-        if (type === 'number' && fixed > 0 ) float_input(input)
+        if (type === 'number' && fixed > 0 ) render_number_input(input)
         input.onblur = (e) => handle_blur(e, input)
         // Safari is not support onfocus to use select()
         input.onclick = (e) => handle_click(e, input)
         input.onfocus = (e) => handle_focus(e, input)
+        input.onwheel = (e) => e.preventDefault()
         return el
     }
+    // input click event
     function handle_click (e, input) {
         input.select()
-        if (type === 'number') {
-            const result = Number(input.value).toFixed(fixed) 
-            if (input.value.indexOf('e') >= 1) return input.value = result
-        }
     }
+    // input focus event
     function handle_focus (e, input) {
-        console.log( type );
-        if (type === 'number') {
-            if (input.value.indexOf('e') >= 1) return input.value = Number(input.value).toFixed(fixed)
-        }
+
     }
-    function handle_normal_pressed (e, input) {
-        console.log(type);
-        const key = e.key
-        const code = e.keyCode || e.charCode
-        if (code === 13 || key === 'Enter') input.blur()
-        if (code === 8 || key === 'Backspace') input.value = ''
-        if (input.value.length >= maxlength) return e.preventDefault()
-    }
-    function float_input (input) {
-        if (fixed < 1) return 
-        input.value = value
-        input.placeholder = `0.${'0'.repeat(fixed)}`
-        input.min = min
-        input.max = max
-        input.step = convert_exponential_to_decimal(step)
-        input.onkeypress = (e) => handle_pressed(e, input)
-        input.onkeydown = (e) => handle_keydown_change(e, input)
-        input.onkeyup = (e) => handle_keyup_change(e, input)
-        
-    }
+    // input blur event
     function handle_blur (e, input) {
         if (input.value === '') return
         if (type === 'number') {
@@ -78,6 +55,32 @@ function i_input (option, protocol) {
         message = make({to, type: 'blur', data: {input: name, value: input.value}})
         send(message)
     }
+    // input keypress event
+    function handle_normal_pressed (e, input) {
+        const key = e.key
+        const code = e.keyCode || e.charCode
+        if (code === 13 || key === 'Enter') input.blur()
+        if (code === 8 || key === 'Backspace') input.value = ''
+        if (input.value.length >= maxlength) return e.preventDefault()
+    }
+    // generate float number input
+    function render_number_input (input) {
+        if (fixed < 1) return 
+        input.value = value
+        input.min = min
+        input.max = max
+        // if (fixed <= 14) {
+            input.step = convert_exponential_to_decimal(step)
+            input.placeholder = `0.${'0'.repeat(fixed)}`
+        // } else {
+        //     message = make({to: 'number-input', type: 'error', data: 'fixed cannot over than 13 maximun length'})
+        //     send(message)
+        // }
+        input.onkeypress = (e) => handle_pressed(e, input)
+        input.onkeydown = (e) => handle_keydown_change(e, input)
+        input.onkeyup = (e) => handle_keyup_change(e, input)
+    }
+    // float number input pressed event
     function handle_pressed (e, input) {
         const regex = /[\d+\.]/
         const key = e.key
@@ -86,12 +89,38 @@ function i_input (option, protocol) {
         if (!key.match(regex)) return false
         if (input.value.length >= input.maxlength) return false
     }
+    // float number input keydown event
     function handle_keydown_change (e, input) {
-        const val = Number(input.value)
-        if (val < min || val > max) e.preventDefault()  
+        const val = input.value === '' ? 0 : Number(input.value)
+        const key = e.key
+        const code = e.keyCode || e.charCode
+        if (val < min || val > max) e.preventDefault()
+        if (code === 38 || key === 'ArrowUp') {
+            // if (fixed > 14) return
+            if (input.value >= max ) return input.value = max
+            e.preventDefault()
+            const number = Math.pow(10, fixed)
+            const inc = number * step
+            let plus_val = (val * number) + inc
+            let new_val = parseFloat(plus_val / number).toFixed(fixed)
+            input.value = new_val
+            console.log(`new: ${new_val}`,`inc: ${inc}`, `plus val: ${plus_val}`, `number: ${number}`)
+        }
+        if (code === 40 || key === 'ArrowDown' ) {
+            // if (fixed > 14) return
+            if (input.value <= min ) return input.value = min
+            e.preventDefault()
+            const number = Math.pow(10, fixed)
+            const dec = number * step 
+            let minus_val = (val * number) - dec
+            let new_val = parseFloat(minus_val / number).toFixed(fixed)
+            input.value = new_val
+            console.log(`new: ${new_val}`, `dec: ${dec}`, `minus val: ${minus_val}`, `number: ${number}`)
+        }
     }
+    // float number input keyup event
     function handle_keyup_change (e, input) {
-        const val = Number(input.value)
+        const val = input.value === '' ? 0 : Number(input.value)
         if (val < min || val > max) e.preventDefault()
         if (val > max) input.value = max
         if (val < min) input.value = min
@@ -181,9 +210,16 @@ function i_input (option, protocol) {
         outline: none;
         box-shadow: var(--shadow-xy) var(--shadow-blur) hsla( var(--shadow-color), var(--shadow-opacity));;
     }
-    [role='input']:focus {
+    [role="input"]:focus {
         --shadow-opacity: ${shadow_opacity ? shadow_opacity : '.3'};
         font-size: var(--current-size);
+    }
+    [role="input"][type="number"] {
+        -moz-appearance: textfield;
+    }
+    [role="input"][type="number"]::-webkit-outer-spin-button, 
+    [role="input"][type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
     }
     ${custom_style}
     `

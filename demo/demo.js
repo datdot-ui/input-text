@@ -31,7 +31,7 @@ function demo () {
             // shadow_offset_xy: '4px 4px',
         }
     }}, protocol('number'))
-    const float_number = i_input({name: 'float number', role: 'input', type: 'number', fixed: 8, step: 0.00000001, theme: {
+    const float_number = i_input({name: 'float number', role: 'input', type: 'number', fixed: 14, step: 0.00000000000001, theme: {
         props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
