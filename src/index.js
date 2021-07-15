@@ -1,6 +1,18 @@
 const style_sheet = require('support-style-sheet')
 const message_maker = require('message-maker')
+const big_number = require('bignumber.js')
 module.exports = i_input
+const pow = big_number(10).pow(18)
+console.log( big_number(pow.toFixed() + 1).div(pow).toFixed(18).split('.')[1]);
+let val = '99.999'
+let i = val.split('.')[0]
+let d = val.split('.')[1]
+console.log('i:', i);
+console.log('d:', d);
+let big_d = new big_number(d * big_number(10).pow(18 - d.length))
+let new_d = big_d.plus(1).toString()
+let new_val = `${i}.${new_d}`
+console.log(new_val);
 
 function i_input (option, protocol) {
     const {page = 'Demo', to = '', flow = 'i-input', name, role = 'input', type = 'text', value = '', fixed = 0, min = 0, max = 100, maxlength = 0, step = 0.01, float = false, checked = false, disabled = false, theme} = option

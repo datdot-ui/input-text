@@ -30,10 +30,10 @@
   },
   "dependencies": {
     "bal": "^1.0.2",
+    "bignumber.js": "^9.0.1",
     "csjs-inject": "^1.0.1",
     "datdot-ui-button": "git+https://github.com/fionataeyang/datdot-ui-button.git",
     "datdot-ui-icon": "git+https://github.com/fionataeyang/datdot-ui-icon.git",
-    "datdot-ui-logs": "git+https://github.com/fionataeyang/datdot-ui-logs.git",
-    "decimal.js": "^10.3.1"
+    "datdot-ui-logs": "git+https://github.com/fionataeyang/datdot-ui-logs.git"
   }
 }
