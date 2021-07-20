@@ -1,58 +1,111 @@
 const style_sheet = require('support-style-sheet')
 const message_maker = require('message-maker')
-const big_number = require('bignumber.js')
+// const big_int = require('big-int')
+const practice = require('practice')
+
 module.exports = i_input
-const pow = big_number(10).pow(18)
-console.log( big_number(pow.toFixed() + 1).div(pow).toFixed(18).split('.')[1]);
-let val = '99.999'
-let i = val.split('.')[0]
-let d = val.split('.')[1]
-console.log('i:', i);
-console.log('d:', d);
-let big_d = new big_number(d * big_number(10).pow(18 - d.length))
-let new_d = big_d.plus(1).toString()
-let new_val = `${i}.${new_d}`
-console.log(new_val);
 
 function i_input (option, protocol) {
-    const {page = 'Demo', to = '', flow = 'i-input', name, role = 'input', type = 'text', value = '', fixed = 0, min = 0, max = 100, maxlength = 0, step = 0.01, float = false, checked = false, disabled = false, theme} = option
+    const {page = 'Demo', to = '', flow = 'i-input', name, role = 'input', type = 'text', value = '', min = 0, max = 100, maxlength = 0, step = '1', placeholder = '', float = false, checked = false, disabled = false, theme} = option
     let is_checked = checked
     let is_disabled = disabled
     const send = protocol(get)
     let make = message_maker(`${name} / ${role} / ${flow} / ${page}`)
     let message = make({type: 'ready', data: {input: type, value}})
+    let [int, dec] = get_step_arr()
+    let cal_int = 0
+    let cal_dec = 0
     send(message)
     const widget = () => {
         const el = document.createElement('i-input')
         const shadow = el.attachShadow({mode: 'closed'})
         const input = document.createElement('input')
+        set_attribute(el, input)
+        style_sheet(shadow, style)
+        shadow.append(input)
+        // handle events go here
+        input.onblur = (e) => handle_blur(e, input)
+        // Safari is not support onfocus to use select()
+        input.onclick = (e) => handle_click(e, input)
+        input.onfocus = (e) => handle_focus(e, input)
+        input.onwheel = (e) => e.preventDefault()
+        input.onkeypress = (e) => handle_pressed(e, input)
+        input.onkeydown = (e) => handle_keydown_change(e, input)
+        input.onkeyup = (e) => handle_keyup_change(e, input)
+        return el
+    }
+    // all set attributes go here
+    function set_attribute (el, input) {
         input.type = type
         input.name = name
         if (value !== '') input.value = value
+        if (placeholder !== '') input.placeholder = placeholder
+        if (type === 'number') {
+            input.min = min
+            input.max = max
+        }
+        if (step !== '1') input.step =  `${int}.${dec}` 
         // properties
         el.setAttribute('role', role)
         el.setAttribute('type', type)
         input.setAttribute('role', role)
         input.setAttribute('aria-label', name)
         if (is_disabled) el.setAttribute('disabled', is_disabled)
-        style_sheet(shadow, style)
-        shadow.append(input)
-        if (maxlength > 0 && fixed === 0) {
-            input.setAttribute('maxlength', maxlength)
-            input.onkeypress = (e) => handle_normal_pressed(e, input)
+        if (maxlength > 0 ) input.setAttribute('maxlength', maxlength)
+    }
+    // to find integers and decimals in step
+    function get_step_arr () {
+        let str = `${step}`
+        let [i, d] = str.split('.')
+        // if d === undefined, make d euqal to 0
+        if (d === void 0) d = '0'
+        return [i, d]
+    }
+    // to find integers and decimals in input.value
+    function get_val_arr (string) {
+        let [i, d] = string.split('.')
+        // if (i or d) === undefined, make d euqal to 0
+        if (i === '') i = '0'
+        if (d === void 0) d = '0'
+        return [i, d]
+    }
+    function to_increase (e, input, val) {
+        e.preventDefault()
+        let [step_i, step_d] = get_step_arr()
+        let [val_i, val_d] = get_val_arr(input.value)
+        let step_len = step_d.length
+        let val_len = val_d.length
+        if (val_len < step_len) val_d = val_d.padEnd(step_len, '0')
+        if (val_len > step_len) step_d = step_d.padEnd(val_len, '0')
+        let [cal_i, cal_d] = [`${BigInt(val_i) + BigInt(step_i)}`,`${BigInt(val_d) + BigInt(step_d)}`]
+        let cal_len = cal_d.length
+        if (cal_len > val_len) {
+            const offset = cal_len - val_len
+            let [new_i, new_d] = [cal_d.slice(0, offset), cal_d.slice(offset)]
+            cal_i = `${BigInt(cal_i) + BigInt(new_i)}`
+            cal_d = new_d
         }
-        // float number
-        if (type === 'number' && fixed > 0 ) render_number_input(input)
-        input.onblur = (e) => handle_blur(e, input)
-        // Safari is not support onfocus to use select()
-        input.onclick = (e) => handle_click(e, input)
-        input.onfocus = (e) => handle_focus(e, input)
-        input.onwheel = (e) => e.preventDefault()
-        return el
+        let update = `${cal_i}.${cal_d}`
+        input.value = update
+        console.log('step:', step_i, step_d);
+        console.log('val:', val_i, val_d);
+    }
+    function to_decrease (e, input, val) {
+        e.preventDefault()
+        let [step_i, step_d] = get_step_arr()
+        let [val_i, val_d] = get_val_arr(val)
+        let step_len = step_d.length
+        let val_len = val_d.length
+        if (val_len < step_len) val_d = val_d.padEnd(step_len, '0')
+        if (val_len > step_len) step_d = step_d.padEnd(val_len, '0')
+        let [cal_i, cal_d] = [`${BigInt(val_i) - BigInt(step_i)}`,`${BigInt(val_d) - BigInt(step_d)}`]
+        let update = `${cal_i}.${Math.abs(cal_d)}`
+        input.value = update
+        console.log('step:', step_i, step_d);
+        console.log('val:', val_i, val_d);
     }
     // input click event
     function handle_click (e, input) {
-        input.select()
     }
     // input focus event
     function handle_focus (e, input) {
@@ -61,103 +114,38 @@ function i_input (option, protocol) {
     // input blur event
     function handle_blur (e, input) {
         if (input.value === '') return
-        if (type === 'number') {
-            if (input.value.indexOf('e') >= 1) input.value = Number(input.value).toFixed(fixed)
-        }
         message = make({to, type: 'blur', data: {input: name, value: input.value}})
         send(message)
     }
     // input keypress event
-    function handle_normal_pressed (e, input) {
+    function handle_pressed (e, input) {
         const key = e.key
         const code = e.keyCode || e.charCode
+        if (Number(val) >= Number(max)) return input.value = Number(max)
+        if (Number(val) < 1) return input.value = Number(min)
         if (code === 13 || key === 'Enter') input.blur()
         if (code === 8 || key === 'Backspace') input.value = ''
-        if (input.value.length >= maxlength) return e.preventDefault()
-    }
-    // generate float number input
-    function render_number_input (input) {
-        if (fixed < 1) return 
-        input.value = value
-        input.min = min
-        input.max = max
-        // if (fixed <= 14) {
-            input.step = convert_exponential_to_decimal(step)
-            input.placeholder = `0.${'0'.repeat(fixed)}`
-        // } else {
-        //     message = make({to: 'number-input', type: 'error', data: 'fixed cannot over than 13 maximun length'})
-        //     send(message)
-        // }
-        input.onkeypress = (e) => handle_pressed(e, input)
-        input.onkeydown = (e) => handle_keydown_change(e, input)
-        input.onkeyup = (e) => handle_keyup_change(e, input)
-    }
-    // float number input pressed event
-    function handle_pressed (e, input) {
-        const regex = /[\d+\.]/
-        const key = e.key
-        const code = e.keyCode || e.charCode
-        if (code === 13 || key === 'Enter') input.blur()
-        if (!key.match(regex)) return false
-        if (input.value.length >= input.maxlength) return false
+        if (maxlength > 0 && input.value.length > maxlength) e.preventDefault()
     }
     // float number input keydown event
     function handle_keydown_change (e, input) {
-        const val = input.value === '' ? 0 : Number(input.value)
+        const val = input.value === '' ? 0 : input.value
         const key = e.key
         const code = e.keyCode || e.charCode
-        if (val < min || val > max) e.preventDefault()
-        if (code === 38 || key === 'ArrowUp') {
-            // if (fixed > 14) return
-            if (input.value >= max ) return input.value = max
-            e.preventDefault()
-            const number = Math.pow(10, fixed)
-            const inc = number * step
-            let plus_val = (val * number) + inc
-            let new_val = parseFloat(plus_val / number).toFixed(fixed)
-            input.value = new_val
-            console.log(`new: ${new_val}`,`inc: ${inc}`, `plus val: ${plus_val}`, `number: ${number}`)
-        }
-        if (code === 40 || key === 'ArrowDown' ) {
-            // if (fixed > 14) return
-            if (input.value <= min ) return input.value = min
-            e.preventDefault()
-            const number = Math.pow(10, fixed)
-            const dec = number * step 
-            let minus_val = (val * number) - dec
-            let new_val = parseFloat(minus_val / number).toFixed(fixed)
-            input.value = new_val
-            console.log(`new: ${new_val}`, `dec: ${dec}`, `minus val: ${minus_val}`, `number: ${number}`)
+        if (type === 'number') {
+            if (val < min || val > max) e.preventDefault()
+            if (code === 38 || key === 'ArrowUp') to_increase(e, input, val)
+            if (code === 40 || key === 'ArrowDown' ) to_decrease(e, input, val)
         }
     }
     // float number input keyup event
     function handle_keyup_change (e, input) {
-        const val = input.value === '' ? 0 : Number(input.value)
-        if (val < min || val > max) e.preventDefault()
-        if (val > max) input.value = max
-        if (val < min) input.value = min
-        if (input.value.indexOf('.') > 0 && input.value.split('.')[1].length > fixed) {
-            // find decimals in val 
-            const decimals = input.value.split('.')[1]
-            // last number in decimals
-            const last = Number(decimals.split('')[decimals.length - 1])
-            // if last less than 5 then convert to regular math
-            if ( last < 5) return input.value = parseFloat(val).toFixed(fixed)
-            // else do toFixed() to convert to correct number
-            return input.value = toFixed(val, fixed)
+        const val = input.value === '' ? 0 : input.value
+        if (type === 'number') {
+            if (val < min || val > max) e.preventDefault()
+            if (val > max) input.value = max
+            if (val < min) input.value = min
         }
-    }
-    // it has an issue with 1.104 (it will be 1.11, not corrected)
-    function toFixed(number, decimals) {
-        let x = Math.pow(10, Number(decimals) + 1)
-        return (Number(number) + (1 / x)).toFixed(decimals)
-    }
-    function convert_exponential_to_decimal (exponential_number) {
-        const str = exponential_number.toString()
-        if (str.indexOf('e') === -1) return exponential_number
-        const exponent = Number(str.split('-')[1], 10)
-        const result = exponential_number.toFixed(exponent)
-        return result
     }
     function get (msg) {}
     

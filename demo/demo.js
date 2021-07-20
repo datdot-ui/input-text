@@ -11,7 +11,7 @@ function demo () {
     let recipients = []
     const log_list = logs(protocol('logs'))
     // regular
-    const text = i_input({name: 'text', role: 'input', type: 'text', value: 'hello', maxlength: 5, theme: {
+    const text = i_input({name: 'text', role: 'input', type: 'text', value: 'hello', placeholder: 'take a cup of coffee', theme: {
         props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
@@ -21,7 +21,7 @@ function demo () {
             // shadow_offset_xy: '4px 4px',
         }
     }}, protocol('text'))
-    const number = i_input({name: 'number', role: 'input', type: 'number', maxlength: 8, theme: {
+    const number = i_input({name: 'number', role: 'input', type: 'number', value: '9.855521', step: '0.1000000005', theme: {
         props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
@@ -31,7 +31,7 @@ function demo () {
             // shadow_offset_xy: '4px 4px',
         }
     }}, protocol('number'))
-    const float_number = i_input({name: 'float number', role: 'input', type: 'number', fixed: 14, step: 0.00000000000001, theme: {
+    const decimal_number = i_input({name: 'decimal number', role: 'input', type: 'number', step: '0.00000000000001', theme: {
         props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
@@ -40,7 +40,7 @@ function demo () {
             // shadow_opacity: '.65',
             // shadow_offset_xy: '4px 4px',
         }
-    }}, protocol('float number'))
+    }}, protocol('decimal number'))
     const checkbox = i_input({name: 'checkbox', role: 'checkbox', type: 'checkbox'}, protocol('checkbox'))
     // content
     const content = bel`
@@ -50,17 +50,18 @@ function demo () {
             ${text}
         </section>
         <section>
-            <h2>Number input</h2>
+        <h2>Number input</h2>
             ${number}
         </section>
         <section>
-            <h2>Float number input</h2>
-            ${float_number}
+            <h2>Decimal input</h2>
+            ${decimal_number}
         </section>
         <section>
             <h2>Checkbox</h2>
             ${checkbox}
         </section>
+       
     </div>
     `
     const container = bel`<div class="${css.container}">${content}</div>`
