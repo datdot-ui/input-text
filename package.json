@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fionataeyang/datdot-ui-input.git"
+    "url": "git+https://github.com/datdotorg/datdot-ui-input.git"
   },
   "keywords": [
     "datdot",
@@ -18,12 +18,12 @@
     "widget",
     "input"
   ],
-  "author": "fionataeyang",
+  "author": "datdotorg",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/fionataeyang/datdot-ui-input/issues"
+    "url": "https://github.com/datdotorg/datdot-ui-input/issues"
   },
-  "homepage": "https://github.com/fionataeyang/datdot-ui-input#readme",
+  "homepage": "https://github.com/datdotorg/datdot-ui-input#readme",
   "devDependencies": {
     "browserify": "^17.0.0",
     "budo": "^11.6.4"
@@ -31,8 +31,8 @@
   "dependencies": {
     "bal": "^1.0.2",
     "csjs-inject": "^1.0.1",
-    "datdot-ui-button": "git+https://github.com/fionataeyang/datdot-ui-button.git",
-    "datdot-ui-icon": "git+https://github.com/fionataeyang/datdot-ui-icon.git",
-    "datdot-ui-logs": "git+https://github.com/fionataeyang/datdot-ui-logs.git"
+    "datdot-ui-button": "git+https://github.com/datdotorg/datdot-ui-button.git",
+    "datdot-ui-icon": "git+https://github.com/datdotorg/datdot-ui-icon.git",
+    "datdot-ui-logs": "git+https://github.com/datdotorg/datdot-ui-logs.git"
   }
 }
