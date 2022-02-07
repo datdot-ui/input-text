@@ -6,84 +6,126 @@ const logs = require('datdot-ui-logs')
 const i_input = require('..')
 const button = require('datdot-ui-button')
 const icon = require('datdot-ui-icon')
+const message_maker = require('../src/node_modules/message-maker')
+
 
 function demo () {
-    let recipients = []
-    const log_list = logs(protocol('logs'))
-    // regular
-    const text = i_input({name: 'text', role: 'input', type: 'text', value: 'hello', placeholder: 'take a cup of coffee', theme: {
-        props: {
+    var id = 0
+    const myaddress = `demo-${id++}`
+// ---------------------------------------------------------------
+    const inbox = {}
+    const outbox = {}
+    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
+// ---------------------------------------------------------------
+    let recipients = {}
+    // const log_list = logs(make_protocol('logs'))
+// ---------------------------------------------------------------
+    const text = i_input({
+        name: 'text', 
+        role: 'input', 
+        type: 'text', 
+        value: 'hello', 
+        placeholder: 'take a cup of coffee', 
+        theme: { 
+            props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
             // border_style: 'dashed',
             // shadow_color: 'var(--color-blue)',
             // shadow_opacity: '.65',
             // shadow_offset_xy: '4px 4px',
+            }
+        } 
+    }, make_protocol('text'))
+// ---------------------------------------------------------------
+    const number = i_input({
+        name: 'number', 
+        role: 'input', 
+        type: 'number', 
+        value: '9.855521', 
+        step: '0.1000000005',
+        placeholder: 123, 
+        theme: {
+            props: {
+                // border_width: '2px',
+                // border_color: 'var(--color-blue)',
+                // border_style: 'dashed',
+                // shadow_color: 'var(--color-blue)',
+                // shadow_opacity: '.65',
+                // shadow_offset_xy: '4px 4px',
+            }
         }
-    }}, protocol('text'))
-    const number = i_input({name: 'number', role: 'input', type: 'number', value: '9.855521', step: '0.1000000005', theme: {
-        props: {
+    }, make_protocol('number'))
+ // ---------------------------------------------------------------   
+    const decimal_number = i_input({
+        name: 'decimal number', 
+        role: 'input', 
+        type: 'number', 
+        step: '0.00000000000001',
+        placeholder: 99.5,
+        theme: {
+            props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
             // border_style: 'dashed',
             // shadow_color: 'var(--color-blue)',
             // shadow_opacity: '.65',
             // shadow_offset_xy: '4px 4px',
+            }
         }
-    }}, protocol('number'))
-    const decimal_number = i_input({name: 'decimal number', role: 'input', type: 'number', step: '0.00000000000001', theme: {
-        props: {
-            // border_width: '2px',
-            // border_color: 'var(--color-blue)',
-            // border_style: 'dashed',
-            // shadow_color: 'var(--color-blue)',
-            // shadow_opacity: '.65',
-            // shadow_offset_xy: '4px 4px',
-        }
-    }}, protocol('decimal number'))
-    const checkbox = i_input({name: 'checkbox', role: 'checkbox', type: 'checkbox'}, protocol('checkbox'))
+    }, make_protocol('decimal number'))
+    // ---------------------------------------------------------------
+    const checkbox_newsletter = i_input({
+        // name: 'checkbox-newsletter', 
+        // role: 'checkbox-newsletter', 
+        type: 'checkbox'
+    }, make_protocol('checkbox-newsletter'))
+    // ---------------------------------------------------------------
+    const checkbox_terms = i_input({
+        // name: 'checkbox-terms', 
+        // role: 'checkbox-terms', 
+        type: 'checkbox'
+    }, make_protocol('checkbox-terms'))
+// ---------------------------------------------------------------
     // content
     const content = bel`
-    <div class=${css.content}>
-        <section>
-            <h2>Text input</h2>
-            ${text}
-        </section>
-        <section>
-        <h2>Number input</h2>
-            ${number}
-        </section>
-        <section>
-            <h2>Decimal input</h2>
-            ${decimal_number}
-        </section>
-        <section>
-            <h2>Checkbox</h2>
-            ${checkbox}
-        </section>
-       
-    </div>
-    `
+        <div class=${css.content}>
+            <section> <h2>Text input</h2> ${text} </section>
+            <section> <h2>Number input</h2> ${number} </section>
+            <section> <h2>Decimal input</h2> ${decimal_number} </section>
+            <section> <h2>Checkbox newletter</h2> ${checkbox_newsletter} </section>
+            <section> <h2>Checkbox terms</h2> ${checkbox_terms} </section>
+        </div>`
     const container = bel`<div class="${css.container}">${content}</div>`
-    const app = bel`
-    <div class="${css.wrap}" data-state="debug">
-        ${container}${log_list}
-    </div>`
-
+    // const app = bel`<div class="${css.wrap}" data-state="debug"> ${container}${log_list} </div>`
+    const app = bel`<div class="${css.wrap}" data-state="debug"> ${container} </div>`
     return app
-
-    function protocol (name) {
-        return send => {
-            recipients[name] = send
-            return get
+// ---------------------------------------------------------------
+    function make_protocol (name) {
+        return function protocol (address, notify) {
+            recipients[name] = { address, notify, make: message_maker(myaddress) }
+            return { notify: listen, address: myaddress }
         }
-        
     }
-    function get (msg) {
-        recipients['logs'](msg)
+    function listen (msg) {
+        const { head, refs, type, data, meta } = msg // receive msg
+        console.log('New message', { head, type })
+        inbox[head.join('/')] = msg                  // store msg
+        // recipients['logs'](msg)
+        const [from] = head
+        console.log({recipients})
+        if (from === recipients['checkbox-terms']?.address) {
+            const { notify, make, address } = recipients['checkbox-terms']
+            const msg = make({ to: address, type: 'test', data: 123, refs: {} })
+            notify(msg)
+        }
+        if (from === recipients['checkbox-newsletter']?.address) { }
+        else { }
     }
+// ---------------------------------------------------------------
 }
 
+// ---------------------------------------------------------------
 const css = csjs`
 :root {
     --b: 0, 0%;
@@ -242,5 +284,6 @@ body {
     }
 }
 `
-
+// ---------------------------------------------------------------
 document.body.append(demo())
+// ---------------------------------------------------------------

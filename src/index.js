@@ -3,76 +3,115 @@ const message_maker = require('message-maker')
 // const big_int = require('big-int')
 const practice = require('practice')
 
+var id = 0
+
 module.exports = i_input
 
-function i_input (option, protocol) {
-    const {page = 'Demo', to = '', flow = 'i-input', name, role = 'input', type = 'text', value = '', min = 0, max = 100, maxlength = 0, step = '1', placeholder = '', float = false, checked = false, disabled = false, theme} = option
-    let is_checked = checked
-    let is_disabled = disabled
-    const send = protocol(get)
-    let make = message_maker(`${name} / ${role} / ${flow} / ${page}`)
-    let message = make({type: 'ready', data: {input: type, value}})
-    let [int, dec] = get_step_arr()
-    let cal_int = 0
-    let cal_dec = 0
-    send(message)
+function i_input (opts, protocol) {
+    const myaddress = `i-input-${id++}` // unique
+    const {
+        role = 'input', 
+        type = 'text', 
+        value = '', 
+        min = 0, 
+        max = 100, 
+        maxlength = 50, 
+        step = '1', 
+        placeholder = '', 
+        checked = false, 
+        disabled = false, 
+        theme 
+    } = opts
+// ---------------------------------------------------------------
+    const recipients = {}
+    const inbox = {}
+    const outbox = {}
+    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
+// ---------------------------------------------------------------
+    const status = {
+        is_checked: checked,
+        is_disabled: disabled,
+    }
+    let [step_i, step_d] = get_int_and_dec(step)
+// ---------------------------------------------------------------
+    const {notify, address} = protocol(myaddress, function listen (msg   ) {
+        const { head, refs, type, data, meta } = msg // listen to msg
+        inbox[head.join('/')] = msg                  // store msg
+        const [from, to, msg_id] = head
+        // todo: what happens when we receive the message
+        if (from === recipients['parent'].address) {
+            if (type === 'disable') {
+                element.disabled = true
+                const { notify, make, address } = recipients['parent']
+                const msg = make({ to: address, type: 'confirm-disable', refs: { cause: msg.head  }  })
+                notify(msg)
+            } else if (type === 'enable') {
+                element.disabled = false
+                const { notify, make, address } = recipients['parent']
+                const msg = make({ to: address, type: 'confirm-enable', refs: { cause: msg.head  } })
+                notify(msg)
+            }
+        }
+        if (from === 'icon') {
+
+        }
+        else {
+
+        }
+    })
+    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
+
+    let make = message_maker(myaddress) // @TODO: replace flow with myaddress/myaddress
+    let message = make({to: address, type: 'ready', data: {input: type, value}})
+    notify(message)
+// ---------------------------------------------------------------
     const widget = () => {
         const el = document.createElement('i-input')
         const shadow = el.attachShadow({mode: 'closed'})
         const input = document.createElement('input')
-        set_attribute(el, input)
+        set_attributes(el, input)
         style_sheet(shadow, style)
         shadow.append(input)
         // handle events go here
-        input.onblur = (e) => handle_blur(e, input)
-        // Safari is not support onfocus to use select()
+        input.onwheel = (e) => e.preventDefault()
+        input.onblur = (e) => handle_blur(e, input) // when element loses focus
+        // Safari doesn't support onfocus @TODO use select()
         input.onclick = (e) => handle_click(e, input)
         input.onfocus = (e) => handle_focus(e, input)
-        input.onwheel = (e) => e.preventDefault()
-        input.onkeypress = (e) => handle_pressed(e, input)
         input.onkeydown = (e) => handle_keydown_change(e, input)
         input.onkeyup = (e) => handle_keyup_change(e, input)
         return el
     }
+// ---------------------------------------------------------------
     // all set attributes go here
-    function set_attribute (el, input) {
+    function set_attributes (el, input) {
         input.type = type
         input.name = name
-        if (value !== '') input.value = value
-        if (placeholder !== '') input.placeholder = placeholder
+        input.value = value
+        input.placeholder = placeholder
         if (type === 'number') {
             input.min = min
             input.max = max
         }
-        if (step !== '1') input.step =  `${int}.${dec}` 
         // properties
         el.setAttribute('role', role)
         el.setAttribute('type', type)
         input.setAttribute('role', role)
-        input.setAttribute('aria-label', name)
-        if (is_disabled) el.setAttribute('disabled', is_disabled)
-        if (maxlength > 0 ) input.setAttribute('maxlength', maxlength)
+        input.setAttribute('aria-myaddress', name)
+        if (status.is_disabled) el.setAttribute('disabled', status.is_disabled)
+        input.setAttribute('maxlength', maxlength)
     }
-    // to find integers and decimals in step
-    function get_step_arr () {
-        let str = `${step}`
-        let [i, d] = str.split('.')
-        // if d === undefined, make d euqal to 0
-        if (d === void 0) d = '0'
-        return [i, d]
-    }
-    // to find integers and decimals in input.value
-    function get_val_arr (string) {
+    // get integers and decimals in value
+    function get_int_and_dec (string) {
         let [i, d] = string.split('.')
-        // if (i or d) === undefined, make d euqal to 0
         if (i === '') i = '0'
         if (d === void 0) d = '0'
         return [i, d]
-    }
-    function to_increase (e, input, val) {
+    } 
+    function increase (e, input, val) {
         e.preventDefault()
-        let [step_i, step_d] = get_step_arr()
-        let [val_i, val_d] = get_val_arr(input.value)
+        let [step_i, step_d] = get_int_and_dec(step)
+        let [val_i, val_d] = get_int_and_dec(value)
         let step_len = step_d.length
         let val_len = val_d.length
         if (val_len < step_len) val_d = val_d.padEnd(step_len, '0')
@@ -90,10 +129,9 @@ function i_input (option, protocol) {
         console.log('step:', step_i, step_d);
         console.log('val:', val_i, val_d);
     }
-    function to_decrease (e, input, val) {
+    function decrease (e, input, val) {
         e.preventDefault()
-        let [step_i, step_d] = get_step_arr()
-        let [val_i, val_d] = get_val_arr(val)
+        let [val_i, val_d] = get_int_and_dec(val)
         let step_len = step_d.length
         let val_len = val_d.length
         if (val_len < step_len) val_d = val_d.padEnd(step_len, '0')
@@ -105,37 +143,35 @@ function i_input (option, protocol) {
         console.log('val:', val_i, val_d);
     }
     // input click event
-    function handle_click (e, input) {
-    }
+    function handle_click (e, input) {}
     // input focus event
-    function handle_focus (e, input) {
-
-    }
+    function handle_focus (e, input) {}
     // input blur event
     function handle_blur (e, input) {
         if (input.value === '') return
         message = make({to, type: 'blur', data: {input: name, value: input.value}})
-        send(message)
+        notify(message)
     }
-    // input keypress event
-    function handle_pressed (e, input) {
-        const key = e.key
-        const code = e.keyCode || e.charCode
-        if (Number(val) >= Number(max)) return input.value = Number(max)
-        if (Number(val) < 1) return input.value = Number(min)
-        if (code === 13 || key === 'Enter') input.blur()
-        if (code === 8 || key === 'Backspace') input.value = ''
-        if (maxlength > 0 && input.value.length > maxlength) e.preventDefault()
-    }
-    // float number input keydown event
+
+    // input keydown event
     function handle_keydown_change (e, input) {
-        const val = input.value === '' ? 0 : input.value
+        const val = input.value
         const key = e.key
         const code = e.keyCode || e.charCode
-        if (type === 'number') {
+        
+        if (code === 13 || key === 'Enter') input.blur()
+
+        // if (code === 8 || key === 'Backspace') input.value = ''
+        
+        if (type === 'number' || type === 'decimal number') {
+            if (Number(val) >= Number(max)) return input.value = Number(max)
+            console.log({val})
+            // if (val.length > 1 && val.charAt(0) === 0) input.value = 0
+            if (maxlength > 0 && val.length > maxlength) e.preventDefault()
+
             if (val < min || val > max) e.preventDefault()
-            if (code === 38 || key === 'ArrowUp') to_increase(e, input, val)
-            if (code === 40 || key === 'ArrowDown' ) to_decrease(e, input, val)
+            if (code === 38 || key === 'ArrowUp') increase(e, input, val)
+            if (code === 40 || key === 'ArrowDown' ) decrease(e, input, val)
         }
     }
     // float number input keyup event
@@ -147,7 +183,6 @@ function i_input (option, protocol) {
             if (val < min) input.value = min
         }
     }
-    function get (msg) {}
     
    // insert CSS style
    const custom_style = theme ? theme.style : ''
@@ -164,7 +199,8 @@ function i_input (option, protocol) {
            shadow_color_hover, shadow_offset_xy_hover, blur_hover, shadow_opacity_hover
        } = theme.props
    }
-    
+
+// ---------------------------------------------------------------
     const style = `
     :host(i-input) {
         --size: ${size ? size : 'var(--size14)'};
@@ -223,5 +259,8 @@ function i_input (option, protocol) {
     }
     ${custom_style}
     `
-    return widget()
+    const element = widget()
+// ---------------------------------------------------------------
+    return element
+// ---------------------------------------------------------------
 }
