@@ -8,7 +8,6 @@ var id = 0
 module.exports = i_input
 
 function i_input (opts, protocol) {
-    const myaddress = `i-input-${id++}` // unique
     const {
         role = 'input', 
         type = 'text', 
@@ -22,10 +21,11 @@ function i_input (opts, protocol) {
         disabled = false, 
         theme 
     } = opts
-// ---------------------------------------------------------------
-    const recipients = {}
+    // ---------------------------------------------------------------
+    const myaddress = `i-input-${id++}` // unique
     const inbox = {}
     const outbox = {}
+    const recipients = {}
     const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
 // ---------------------------------------------------------------
     const status = {
@@ -34,7 +34,7 @@ function i_input (opts, protocol) {
     }
     let [step_i, step_d] = get_int_and_dec(step)
 // ---------------------------------------------------------------
-    const {notify, address} = protocol(myaddress, function listen (msg   ) {
+    const {notify, address} = protocol(myaddress, function listen (msg) {
         const { head, refs, type, data, meta } = msg // listen to msg
         inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
@@ -149,7 +149,7 @@ function i_input (opts, protocol) {
     // input blur event
     function handle_blur (e, input) {
         if (input.value === '') return
-        message = make({to, type: 'blur', data: {input: name, value: input.value}})
+        message = make({to: address, type: 'blur', data: {input: name, value: input.value}})
         notify(message)
     }
 

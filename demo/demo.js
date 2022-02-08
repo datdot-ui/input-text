@@ -8,17 +8,18 @@ const button = require('datdot-ui-button')
 const icon = require('datdot-ui-icon')
 const message_maker = require('../src/node_modules/message-maker')
 
+var id = 0
 
 function demo () {
-    var id = 0
+    // ---------------------------------------------------------------
     const myaddress = `demo-${id++}`
-// ---------------------------------------------------------------
     const inbox = {}
     const outbox = {}
+    let recipients = {}
     const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
 // ---------------------------------------------------------------
-    let recipients = {}
-    // const log_list = logs(make_protocol('logs'))
+    const log_list = logs(make_protocol('logs'))
+    console.log({log_list})
 // ---------------------------------------------------------------
     const text = i_input({
         name: 'text', 
@@ -97,8 +98,7 @@ function demo () {
             <section> <h2>Checkbox terms</h2> ${checkbox_terms} </section>
         </div>`
     const container = bel`<div class="${css.container}">${content}</div>`
-    // const app = bel`<div class="${css.wrap}" data-state="debug"> ${container}${log_list} </div>`
-    const app = bel`<div class="${css.wrap}" data-state="debug"> ${container} </div>`
+    const app = bel`<div class="${css.wrap}" data-state="debug"> ${container}${log_list} </div>`
     return app
 // ---------------------------------------------------------------
     function make_protocol (name) {
@@ -111,7 +111,7 @@ function demo () {
         const { head, refs, type, data, meta } = msg // receive msg
         console.log('New message', { head, type })
         inbox[head.join('/')] = msg                  // store msg
-        // recipients['logs'](msg)
+        recipients['logs'].notify(msg)
         const [from] = head
         console.log({recipients})
         if (from === recipients['checkbox-terms']?.address) {
