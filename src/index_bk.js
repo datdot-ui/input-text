@@ -39,9 +39,7 @@ function input (option, protocol) {
         send(message)
     }
 
-    function get (msg) {
-
-    }
+    function get (msg) {}
 
     return el
 }
