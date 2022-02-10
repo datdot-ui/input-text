@@ -18,7 +18,7 @@ function i_input (opts, protocol) {
         step = '1', 
         placeholder = '', 
         checked = false, 
-        disabled = false, 
+        disabled = false,
         theme 
     } = opts
     // ---------------------------------------------------------------
@@ -34,7 +34,14 @@ function i_input (opts, protocol) {
     }
     let [step_i, step_d] = get_int_and_dec(step)
 // ---------------------------------------------------------------
-    const {notify, address} = protocol(myaddress, function listen (msg) {
+    const {notify, address} = protocol(myaddress, listen)
+    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
+
+    let make = message_maker(myaddress) // @TODO: replace flow with myaddress/myaddress
+    let message = make({to: address, type: 'ready', data: {input: type, value}})
+    notify(message)
+
+    function listen (msg) {
         const { head, refs, type, data, meta } = msg // listen to msg
         inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
@@ -58,13 +65,9 @@ function i_input (opts, protocol) {
         else {
 
         }
-    })
-    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
-
-    let make = message_maker(myaddress) // @TODO: replace flow with myaddress/myaddress
-    let message = make({to: address, type: 'ready', data: {input: type, value}})
-    notify(message)
+    }
 // ---------------------------------------------------------------
+
     const widget = () => {
         const el = document.createElement('i-input')
         const shadow = el.attachShadow({mode: 'closed'})
@@ -165,7 +168,6 @@ function i_input (opts, protocol) {
         
         if (type === 'number' || type === 'decimal number') {
             if (Number(val) >= Number(max)) return input.value = Number(max)
-            console.log({val})
             // if (val.length > 1 && val.charAt(0) === 0) input.value = 0
             if (maxlength > 0 && val.length > maxlength) e.preventDefault()
 

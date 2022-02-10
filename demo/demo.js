@@ -109,11 +109,9 @@ function demo () {
     }
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
-        console.log('New message', { head, type })
         inbox[head.join('/')] = msg                  // store msg
         recipients['logs'].notify(msg)
         const [from] = head
-        console.log({recipients})
         if (from === recipients['checkbox-terms']?.address) {
             const { notify, make, address } = recipients['checkbox-terms']
             const msg = make({ to: address, type: 'test', data: 123, refs: {} })
