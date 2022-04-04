@@ -7,84 +7,127 @@ const logs = require('datdot-ui-logs')
 const i_input = require('..')
 const button = require('datdot-ui-button')
 const icon = require('datdot-ui-icon')
+const message_maker = require('message-maker')
+
+var id = 0
 
 function demo () {
-    let recipients = []
-    const log_list = logs(protocol('logs'))
-    // regular
-    const text = i_input({name: 'text', role: 'input', type: 'text', value: 'hello', placeholder: 'take a cup of coffee', theme: {
-        props: {
+/* ------------------------------------------------
+                    <protocol>
+------------------------------------------------ */
+    const myaddress = `demo-${id++}`
+    const inbox = {}
+    const outbox = {}
+    let recipients = {}
+    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
+
+    function make_protocol (name) {
+        return function protocol (address, notify) {
+            recipients[name] = { address, notify, make: message_maker(myaddress) }
+            return { notify: listen, address: myaddress }
+        }
+    }
+    function listen (msg) {
+        const { head, refs, type, data, meta } = msg // receive msg
+        const [from, to, msg_id] = head
+        inbox[head.join('/')] = msg                  // store msg
+        const { notify: logs_notify, address: logs_address, make: logs_make } = recipients['logs']
+        logs_notify(logs_make({ to: logs_address, type, data }))
+        if (from === recipients['checkbox-terms']?.address) {
+            const { notify, make, address } = recipients['checkbox-terms']
+            notify(make({ to: address, type: 'test', data: 123, refs: {} }))
+        }
+        if (from === recipients['checkbox-newsletter']?.address) { }
+        else { }
+    }
+/* ------------------------------------------------
+                    </protocol>
+------------------------------------------------ */
+
+    const log_list = logs(make_protocol('logs'))
+    console.log({log_list})
+    const text = i_input({
+        name: 'text', 
+        role: 'input', 
+        type: 'text', 
+        value: 'hello', 
+        placeholder: 'take a cup of coffee', 
+        theme: { 
+            props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
             // border_style: 'dashed',
             // shadow_color: 'var(--color-blue)',
             // shadow_opacity: '.65',
             // shadow_offset_xy: '4px 4px',
+            }
+        } 
+    }, make_protocol('text'))
+// ---------------------------------------------------------------
+    const number = i_input({
+        name: 'number', 
+        role: 'input', 
+        type: 'number', 
+        value: '9.855521', 
+        step: '0.1000000005',
+        placeholder: 123, 
+        theme: {
+            props: {
+                // border_width: '2px',
+                // border_color: 'var(--color-blue)',
+                // border_style: 'dashed',
+                // shadow_color: 'var(--color-blue)',
+                // shadow_opacity: '.65',
+                // shadow_offset_xy: '4px 4px',
+            }
         }
-    }}, protocol('text'))
-    const number = i_input({name: 'number', role: 'input', type: 'number', value: '9.855521', step: '0.1000000005', theme: {
-        props: {
+    }, make_protocol('number'))
+ // ---------------------------------------------------------------   
+    const decimal_number = i_input({
+        name: 'decimal number', 
+        role: 'input', 
+        type: 'number', 
+        step: '0.00000000000001',
+        placeholder: 99.5,
+        theme: {
+            props: {
             // border_width: '2px',
             // border_color: 'var(--color-blue)',
             // border_style: 'dashed',
             // shadow_color: 'var(--color-blue)',
             // shadow_opacity: '.65',
             // shadow_offset_xy: '4px 4px',
+            }
         }
-    }}, protocol('number'))
-    const decimal_number = i_input({name: 'decimal number', role: 'input', type: 'number', step: '0.00000000000001', theme: {
-        props: {
-            // border_width: '2px',
-            // border_color: 'var(--color-blue)',
-            // border_style: 'dashed',
-            // shadow_color: 'var(--color-blue)',
-            // shadow_opacity: '.65',
-            // shadow_offset_xy: '4px 4px',
-        }
-    }}, protocol('decimal number'))
-    const checkbox = i_input({name: 'checkbox', role: 'checkbox', type: 'checkbox'}, protocol('checkbox'))
+    }, make_protocol('decimal number'))
+    // ---------------------------------------------------------------
+    const checkbox_newsletter = i_input({
+        // name: 'checkbox-newsletter', 
+        // role: 'checkbox-newsletter', 
+        type: 'checkbox'
+    }, make_protocol('checkbox-newsletter'))
+    // ---------------------------------------------------------------
+    const checkbox_terms = i_input({
+        // name: 'checkbox-terms', 
+        // role: 'checkbox-terms', 
+        type: 'checkbox'
+    }, make_protocol('checkbox-terms'))
+// ---------------------------------------------------------------
     // content
     const content = bel`
-    <div class=${css.content}>
-        <section>
-            <h2>Text input</h2>
-            ${text}
-        </section>
-        <section>
-        <h2>Number input</h2>
-            ${number}
-        </section>
-        <section>
-            <h2>Decimal input</h2>
-            ${decimal_number}
-        </section>
-        <section>
-            <h2>Checkbox</h2>
-            ${checkbox}
-        </section>
-       
-    </div>
-    `
+        <div class=${css.content}>
+            <section> <h2>Text input</h2> ${text} </section>
+            <section> <h2>Number input</h2> ${number} </section>
+            <section> <h2>Decimal input</h2> ${decimal_number} </section>
+            <section> <h2>Checkbox newletter</h2> ${checkbox_newsletter} </section>
+            <section> <h2>Checkbox terms</h2> ${checkbox_terms} </section>
+        </div>`
     const container = bel`<div class="${css.container}">${content}</div>`
-    const app = bel`
-    <div class="${css.wrap}" data-state="debug">
-        ${container}${log_list}
-    </div>`
-
+    const app = bel`<div class="${css.wrap}" data-state="debug"> ${container}${log_list} </div>`
     return app
-
-    function protocol (name) {
-        return send => {
-            recipients[name] = send
-            return get
-        }
-        
-    }
-    function get (msg) {
-        recipients['logs'](msg)
-    }
 }
 
+// ---------------------------------------------------------------
 const css = csjs`
 :root {
     --b: 0, 0%;
@@ -243,9 +286,11 @@ body {
     }
 }
 `
-
+// ---------------------------------------------------------------
 document.body.append(demo())
-},{"..":38,"bel":4,"csjs-inject":7,"datdot-ui-button":24,"datdot-ui-icon":27,"datdot-ui-logs":30,"head":2}],2:[function(require,module,exports){
+// ---------------------------------------------------------------
+
+},{"..":38,"bel":4,"csjs-inject":7,"datdot-ui-button":24,"datdot-ui-icon":29,"datdot-ui-logs":32,"head":2,"message-maker":34}],2:[function(require,module,exports){
 module.exports = head
 
 function head (lang = 'utf8', title = 'Input - DatDot UI') {
@@ -489,7 +534,7 @@ module.exports = hyperx(belCreateElement, {comments: true})
 module.exports.default = module.exports
 module.exports.createElement = belCreateElement
 
-},{"./appendChild":3,"hyperx":34}],5:[function(require,module,exports){
+},{"./appendChild":3,"hyperx":36}],5:[function(require,module,exports){
 (function (global){(function (){
 'use strict';
 
@@ -508,7 +553,7 @@ function csjsInserter() {
 module.exports = csjsInserter;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"csjs":10,"insert-css":35}],6:[function(require,module,exports){
+},{"csjs":10,"insert-css":37}],6:[function(require,module,exports){
 'use strict';
 
 module.exports = require('csjs/get-css');
@@ -987,312 +1032,709 @@ function scopify(css, ignores) {
 
 },{"./regex":20,"./replace-animations":21,"./scoped-name":22}],24:[function(require,module,exports){
 (function (__filename){(function (){
-const file = require('path').basename(__filename)
 const style_sheet = require('support-style-sheet')
-const message_maker = require('message_maker')
+const message_maker = require('message-maker')
+const make_img = require('make-image')
+const make_element = require('make-element')
+const make_grid = require('make-grid')
+const i_icon = require('datdot-ui-icon')
+
+var id = 0
+var icon_count = 0
 
 module.exports = i_button
 
-function i_button (option, protocol) {
-    const {page, flow = 'ui-button', name, body, icon, role = 'button', state, expanded = false, current = false, selected = false, checked = false, disabled = false, theme} = option
+function i_button (opts, parent_protocol) {
+    const {name, role = 'button', controls, body = '', icons = {}, cover, classlist = null, mode = '', state, expanded = undefined, current = undefined, selected = false, checked = false, disabled = false, theme = {}} = opts
+    const el = make_element({name: 'i-button', classlist, role })
+//-------------------------------------------------
+    const myaddress = `${__filename}-${id++}`
+    const inbox = {}
+    const outbox = {}
+    const recipients = {}
+    const names = {}
+    const message_id = to => (outbox[to] = 1 + (outbox[to]||0))
+
+    const {notify, address} = parent_protocol(myaddress, listen)
+    names[address] = recipients['parent'] = { name: 'parent', notify, address, make: message_maker(myaddress) }
+    notify(recipients['parent'].make({ to: address, type: 'ready', refs: {} }))
+
+    function make_protocol (name) {
+        return function protocol (address, notify) {
+            names[address] = recipients[name] = { name, address, notify, make: message_maker(myaddress) }
+            return { notify: listen, address: myaddress }
+        }
+    }
+
+    function listen (msg) {
+        const { head, refs, type, data, meta } = msg // receive msg
+        inbox[head.join('/')] = msg                  // store msg
+        const [from, to, msg_id] = head
+        console.log('BUTTON', { type, name: names[from].name, msg })
+        // toggle
+        if (type.match(/switched/)) return switched_event(data)
+        // dropdown
+        if (type.match(/expanded/)) return expanded_event(data)
+        if (type.match(/collapsed/)) return collapsed_event(data)
+        // tab, checkbox
+        if (type.match(/tab-selected/)) return tab_selected_event(data)
+        // option
+        if (type.match(/selected|unselected/)) return list_selected_event(data)
+        if (type.match(/changed/)) return changed_event(data)
+        if (type.match(/current/)) {
+            is_current = data
+            return set_attr({aria: 'current', prop: is_current})
+        }
+    }
+//-------------------------------------------------
+
+    const {icon = {}, select = { name: 'check' }, list = { name: 'arrow-down'} } = icons
+    if (icon?.name) var main_icon = i_icon({ name: icon.name, path: icon.path}, make_protocol(`${icon.name}-${icon_count++}`))
     let is_current = current
     let is_checked = checked
     let is_disabled = disabled
     let is_selected = selected
-    let is_expanded = expanded
+    let is_expanded = 'expanded' in opts ? expanded : void 0
 
     function widget () {
-        const send = protocol(get)
-        const make = message_maker(`${name} / ${role} / ${flow}`)
-        let data = role === 'tab' ?  {selected: is_current ? 'true' : is_selected, current: is_current} : role === 'switch' ? {checked: is_checked} : role === 'listbox' ? {selected: is_selected} :  disabled ? {disabled} : null
-        const message = make({to: 'demo.js', type: 'ready', data})
-        send(message)
-        const el = document.createElement('i-button')
-        const text = document.createElement('span')
-        el.dataset.name = name
-        el.dataset.ui = role
-        el.setAttribute('role', role)
+        const { make } = recipients['parent']
+        const data = role === 'tab' ?  {selected: is_current ? 'true' : is_selected, current: is_current} : role === 'switch' ? {checked: is_checked} : role === 'listbox' ? {expanded: is_expanded} : disabled ? {disabled} : role === 'option' ? {selected: is_selected, current: is_current} : null
+        notify(make({ to: address, type: 'ready', data }))
+        const shadow = el.attachShadow({mode: 'closed'})
+        const text = make_element({name: 'span', classlist: 'text'})
+        const avatar = make_element({name: 'span', classlist: 'avatar'})
+        const listbox = make_element({name: 'span', classlist: 'listbox'})
+        const option = make_element({name: 'span', classlist: 'option'})
+        // check icon, img and body if has value
+        const add_cover = typeof cover === 'string' ? avatar : undefined
+        const add_text = body ? typeof body === 'object' ? 'undefined' : text : undefined
+        if (typeof cover === 'string') avatar.append(make_img({src: cover, alt: name}))
+        if (typeof cover === 'object') notify(make({ to: address, type: 'error', data: `cover[${typeof cover}] must to be a string` }))
+        if (typeof body === 'object') notify(make({ to: address, type: 'error', data: { body: `content is an ${typeof body}`, content: body } }))
+        if (!is_disabled) el.onclick = handle_click
         el.setAttribute('aria-label', name)
-        el.setAttribute('tabindex', 0)
-        el.onclick = handle_click
-        text.classList.add('text')
         text.append(body)
-        const shadow = el.attachShadow({mode: 'open'})
         style_sheet(shadow, style)
-        if (icon || role === 'option') shadow.append(icon, text)
-        else shadow.append(body)
+        const items = [main_icon, add_cover, add_text]
+        append_items(items, shadow, option, listbox)
+        init_attr(el)
+        return el
+    }
 
+    function init_attr (el) {
         // define conditions
-        if (state) {
-            el.dataset.state = state
-            el.setAttribute('aria-live', 'assertive')
-        }
+        if (state) set_attr({aria: 'aria-live', prop: 'assertive'})
         if (role === 'tab') {
-            el.dataset.current = is_current
-            el.setAttribute('aria-selected', false)
+            set_attr({aria: 'selected', prop: is_selected})
+            set_attr({aria: 'controls', prop: controls})
+            el.setAttribute('tabindex', is_current ? 0 : -1)
         }
         if (role === 'switch') {
-            el.setAttribute('aria-checked', is_checked)
+            set_attr({aria: 'checked', prop: is_checked})
+        }
+        if (role === 'listbox') set_attr({aria: 'haspopup', prop: role})
+        if (disabled) {
+            set_attr({aria: 'disabled', prop: is_disabled})
+            el.setAttribute('disabled', is_disabled)
+        } 
+        if (is_checked) set_attr({aria: 'checked', prop: is_checked})
+        if (role.match(/option/)) {
+            is_selected = is_current ? is_current : is_selected
+            set_attr({aria: 'selected', prop: is_selected})
+        }
+        if (expanded !== undefined) {
+            set_attr({aria: 'expanded', prop: is_expanded})
+        }
+        // make current status
+        if (current !== undefined) set_attr({aria: 'current', prop: is_current})
+    }
+
+    // make element to append into shadowDOM
+    function append_items(items, shadow, option, listbox) {         
+        const [main_icon, add_cover, add_text] = items
+        const target = role === 'listbox' ? listbox : role === 'option' ?  option : shadow
+        // list of listbox or dropdown menu
+        if (role.match(/option/)) shadow.append(i_icon(list,  make_protocol(`${list.name}-${icon_count++}`)), option)
+        // listbox or dropdown button
+        if (role.match(/listbox/)) shadow.append(i_icon(select, make_protocol(`${select.name}-${icon_count++}`)), listbox)
+        items.forEach( item => {
+            if (item === undefined) return
+            target.append(item)
+        })
+    }
+
+    function set_attr ({aria, prop}) {
+        el.setAttribute(`aria-${aria}`, prop)
+    }
+
+    // toggle
+    function switched_event (data) {
+        const {checked} = data
+        is_checked = checked
+        if (is_checked) return set_attr({aria: 'checked', prop: is_checked})
+        else el.removeAttribute('aria-checked')
+    }
+    function expanded_event (data) {
+        is_expanded = data
+        set_attr({aria: 'expanded', prop: is_expanded})
+    }
+    function collapsed_event (data) {
+        is_expanded = data
+        set_attr({aria: 'expanded', prop: is_expanded})
+    }
+    // tab selected
+    function tab_selected_event ({selected}) {
+        is_selected = selected
+        set_attr({aria: 'selected', prop: is_selected})
+        el.setAttribute('tabindex', is_current ? 0 : -1)
+    }
+    function list_selected_event (data) {
+        is_selected = data.selected
+        set_attr({aria: 'selected', prop: is_selected})
+        if (mode === 'listbox-single') {
+            is_current = is_selected
+            set_attr({aria: 'current', prop: is_current})
+        }
+        // option is selected then send selected items to listbox button
+        const { make } = recipients['parent']
+        if (is_selected) notify(make({ to: address, type: 'changed', data: {text: body, cover, icon } }))
+    }
+    function changed_event (data) {
+        const {text, cover, icon, title} = data
+        // new element
+        const new_text = make_element({name: 'span', classlist: 'text'})
+        const new_avatar = make_element({name: 'span', classlist: 'avatar'})
+        // old element
+        const old_icon = shadow.querySelector('.icon')
+        const old_avatar = shadow.querySelector('.avatar')
+        const old_text = shadow.querySelector('.text')
+        // change content for button or switch or tab
+        if (role.match(/button|switch|tab/)) {
+            el.setAttribute('aria-label', text || title)
+            if (text) {
+                if (old_text) old_text.textContent = text
+            } else {
+                if (old_text) old_text.remove()
+            }
+            if (cover) {
+                if (old_avatar) {
+                    const img = old_avatar.querySelector('img')
+                    img.alt = text || title
+                    img.src = cover
+                } else {
+                    new_avatar.append(make_img({src: cover, alt: text || title}))
+                    shadow.insertBefore(new_avatar, shadow.firstChild)
+                }
+            } else {
+                if (old_avatar) old_avatar.remove()
+            }
+            if (icon) {
+                const new_icon = i_icon({ name: icon.name, path: icon.path}, make_protocol(`${icon.name}-${icon_count++}`))
+                if (old_icon) old_icon.parentNode.replaceChild(new_icon, old_icon)
+                else shadow.insertBefore(new_icon, shadow.firstChild)
+            } else {
+                if (old_icon) old_icon.remove()
+            }
+        }
+        // change content for listbox
+        if (role.match(/listbox/)) {
+            listbox.innerHTML = ''
+            if (icon) {
+                const new_icon = i_icon({ name: icon.name, path: icon.path}, make_protocol(`${icon.name}-${icon_count++}`))
+                if (role.match(/listbox/)) listbox.append(new_icon)
+            }
+            if (cover) {
+                new_avatar.append(make_img({src: cover, alt: text}))
+                if (role.match(/listbox/)) listbox.append(new_avatar)
+            }
+            if (text) {
+                new_text.append(text)
+                if (role.match(/listbox/)) listbox.append(new_text)
+            }
+        } 
+    }
+    // button click
+    function handle_click () {
+        const { make } = recipients['parent']
+        const type = 'click'
+        const prev_state = {
+            expanded: is_expanded,
+            selected: is_selected
+        }
+        if ('current' in opts) {
+            notify(make({ to: address, type: 'current', data: {name, current: is_current } }) )
+        }
+        if (expanded !== undefined) {
+            is_expanded = !prev_state.expanded
+            const type = is_expanded ? 'expanded' : 'collapsed'
+            notify(make({ to: address, type, data: {name, expanded: is_expanded } }))
+        }
+        if (role === 'button') {
+            return notify( make({type, to: controls} ))
+        }
+        if (role === 'tab') {
+            if (is_current) return
+            is_selected = prev_state.selected
+            return notify(make({ to: address, type, data: {name, selected: is_selected } }) )
+        }
+        if (role === 'switch') {
+            return notify(make({ to: address, type, data: {name, checked: is_checked } }) )
         }
         if (role === 'listbox') {
-            el.setAttribute('aria-haspopup', role)
+            is_expanded = !prev_state.expanded
+            return notify(make({ to: address, type, data: {name, expanded: is_expanded } }))
         }
-        if (disabled) {
-            el.setAttribute('aria-disabled', is_disabled)
-            el.setAttribute('disabled', is_disabled)
-        } else {
-            el.removeAttribute('aria-disabled')
-            el.removeAttribute('disabled')
-        }
-        if (is_checked) {
-            el.setAttribute('aria-checked', is_checked)
-        }
-        if (current) {
-            is_selected = current
-            el.setAttribute('aria-current', is_current)
-
-        }
-        if (is_selected) {
-            el.setAttribute('aria-selected', is_selected)
-        }
-        if (is_expanded) {
-            el.setAttribute('aria-expanded', is_expanded)
-        }
-        return el
-
-        // toggle
-        function switched_event (data) {
-            is_checked = data
-            if (!is_checked) return el.removeAttribute('aria-checked')
-            el.setAttribute('aria-checked', is_checked)
-        }
-        // dropdown menu
-        function expanded_event (data) {
-            is_expanded = data
-            el.setAttribute('aria-expanded', is_expanded)
-        }
-        // tab checked
-        function checked_event (data) {
-            is_checked = data
-            is_current = is_checked
-            el.setAttribute('aria-selected', is_checked)
-            el.setAttribute('aria-current', is_checked)
-            el.dataset.current = is_current
-        }
-        function selected_event (body) {
-            is_selected = body
-            el.setAttribute('aria-selected', is_selected)
-        }
-        // button click
-        function handle_click () {
-            if (is_current) return
-            // if (role.match(/tab/)) return send({page, from: name, flow: `ui-${role}`, type: 'click', body: is_checked, fn: fn_name, file, line: code_line+1})
-            // if (role.match(/switch/)) return send({page, from: name, flow: `ui-${role}`, type: 'click', body: is_checked, fn: fn_name, file, line: code_line+1})
-            // if (role === 'listbox') return send({page, from: name, flow: `ui-${role}`, type: 'click', body: is_expanded, fn: fn_name, file, line: code_line+2})
-            // if (role === 'option') return send({page, from: name, flow: `ui-${role}`, type: 'click', body: is_selected, fn: fn_name, file, line: code_line+3})
-            // new message
-            const type = 'click'
-            if (role === 'tab') return send( make({type, data: is_checked}) )
-            if (role === 'switch') return send( make({type, data: is_checked}) )
-            if (role === 'listbox') return send( make({type, data: is_expanded}) )
-            if (role === 'option') return send( make({type, data: is_selected}) )
-            // send({page, from: name, flow: `ui-${role}`, type: 'click', fn: fn_name, file, line: code_line+4})
-            send( make({type}) )
-        }
-        // protocol get msg
-        function get (msg) {
-            const { head, refs, type, data } = msg
-            // toggle
-            if (type === 'switched') return switched_event(data)
-            // dropdown
-            if (type === 'expanded') return expanded_event(data)
-            // tab, checkbox
-            if (type.match(/checked|unchecked/)) return checked_event(data)
-            // option
-            if (type.match(/selected|unselected/)) return selected_event(data)
+        if (role === 'option' || role === 'menuitem') {
+            is_selected = prev_state.selected
+            return notify(make({ to: address, type, data: {name, selected: is_selected, content: is_selected ? {text: body, cover, icon} : '' } }) )
         }
     }
    
-     // insert CSS style
-     const custom_style = theme ? theme.style : ''
-     // set CSS variables
-     if (theme && theme.props) {
-        var {size, size_hover, current_size,
-            weight, weight_hover, current_weight,
-            color, color_hover, current_color, current_bg_color, 
-            bg_color, bg_color_hover, border_color_hover,
-            border_width, border_style, border_opacity, border_color, border_radius, 
-            padding, width, height, opacity,
-            fill, fill_hover, icon_size, current_fill,
-            shadow_color, offset_x, offset_y, blur, shadow_opacity,
-            shadow_color_hover, offset_x_hover, offset_y_hover, blur_hover, shadow_opacity_hover
-        } = theme.props
-     }
+    // insert CSS style
+    const custom_style = theme ? theme.style : ''
+    // set CSS variables
+    const {props = {}, grid = {}} = theme
+    const {
+        // default -----------------------------------------//
+        padding, margin, width, height, opacity, 
+        // size
+        size, size_hover, 
+        // weight
+        weight, weight_hover, 
+        // color
+        color, color_hover, color_focus,
+        // background-color
+        bg_color, bg_color_hover, bg_color_focus,
+        // border
+        border_color, border_color_hover,
+        border_width, border_style, border_opacity, border_radius, 
+        // icon
+        icon_fill, icon_fill_hover, icon_size, icon_size_hover,
+        // avatar
+        avatar_width, avatar_height, avatar_radius,
+        avatar_width_hover, avatar_height_hover,
+        // shadow
+        shadow_color, shadow_color_hover, 
+        offset_x, offset_x_hover,
+        offset_y, offset_y_hover, 
+        blur, blur_hover,
+        shadow_opacity, shadow_opacity_hover,
+        // scale
+        scale, scale_hover,
+        // current -----------------------------------------//
+        current_size, 
+        current_weight, 
+        current_color, 
+        current_bg_color,
+        current_icon_size,
+        current_icon_fill,
+        current_list_selected_icon_size,
+        current_list_selected_icon_fill,
+        current_avatar_width, 
+        current_avatar_height,
+        // disabled -----------------------------------------//
+        disabled_size, disabled_weight, disabled_color,
+        disabled_bg_color, disabled_icon_fill, disabled_icon_size,
+        // role === option ----------------------------------//
+        list_selected_icon_size, list_selected_icon_size_hover,
+        list_selected_icon_fill, list_selected_icon_fill_hover,
+        // role === listbox ----------------------------------//
+        // collapsed settings
+        listbox_collapsed_bg_color, listbox_collapsed_bg_color_hover,
+        listbox_collapsed_icon_size, listbox_collapsed_icon_size_hover,
+        listbox_collapsed_icon_fill, listbox_collapsed_icon_fill_hover, 
+        listbox_collapsed_listbox_color, listbox_collapsed_listbox_color_hover,
+        listbox_collapsed_listbox_size, listbox_collapsed_listbox_size_hover,
+        listbox_collapsed_listbox_weight, listbox_collapsed_listbox_weight_hover,
+        listbox_collapsed_listbox_icon_size, listbox_collapsed_listbox_icon_size_hover,
+        listbox_collapsed_listbox_icon_fill, listbox_collapsed_listbox_icon_fill_hover,
+        listbox_collapsed_listbox_avatar_width, listbox_collapsed_listbox_avatar_height,
+        // expanded settings
+        listbox_expanded_bg_color,
+        listbox_expanded_icon_size, 
+        listbox_expanded_icon_fill,
+        listbox_expanded_listbox_color,
+        listbox_expanded_listbox_size, 
+        listbox_expanded_listbox_weight,
+        listbox_expanded_listbox_avatar_width, 
+        listbox_expanded_listbox_avatar_height,
+        listbox_expanded_listbox_icon_size, 
+        listbox_expanded_listbox_icon_fill, 
+    } = props
 
+    const grid_init = {auto: {auto_flow: 'column'}, align: 'items-center', gap: '5px', justify: 'items-center'}
+    const grid_option = grid.option ? grid.option : grid_init
+    const grid_listbox = grid.listbox ? grid.listbox : grid_init
     const style = `
     :host(i-button) {
-        --size: ${size ? size : 'var(--size14)'};
-        --size-hover: ${size_hover ? size_hover : 'var(--size)'};
-        --curren-size: ${current_size ? current_size : 'var(--size14)'};
-        --bold: ${weight ? weight : 'normal'};
+        --size: ${size ? size : 'var(--primary-size)'};
+        --weight: ${weight ? weight : 'var(--weight300)'};
         --color: ${color ? color : 'var(--primary-color)'};
-        --bg-color: ${bg_color ? bg_color : 'var(--color-white)'};
-        --width: ${width ? width : 'unset'};
-        --height: ${height ? height : 'unset'};
+        --color-focus: ${color_focus ? color_focus : 'var(--primary-color-focus)'};
+        --bg-color: ${bg_color ? bg_color : 'var(--primary-bg-color)'};
+        --bg-color-focus: ${bg_color_focus ? bg_color_focus : 'var(--primary-bg-color-focus)'};
+        ${width && `--width: ${width}`};
+        ${height && `--height: ${height}`};
         --opacity: ${opacity ? opacity : '1'};
         --padding: ${padding ? padding : '12px'};
+        --margin: ${margin ? margin : '0'};
         --border-width: ${border_width ? border_width : '0px'};
         --border-style: ${border_style ? border_style : 'solid'};
         --border-color: ${border_color ? border_color : 'var(--primary-color)'};
         --border-opacity: ${border_opacity ? border_opacity : '1'};
         --border: var(--border-width) var(--border-style) hsla( var(--border-color), var(--border-opacity) );
-        --border-radius: ${border_radius ? border_radius : 'var(--primary-button-radius)'};
-        --fill: ${fill ? fill : 'var(--primary-color)'};
-        --fill-hover: ${fill_hover ? fill_hover : 'var(--color-white)'};
-        ---icon-size: ${icon_size ? icon_size : '16px'};
+        --border-radius: ${border_radius ? border_radius : 'var(--primary-radius)'};
         --offset_x: ${offset_x ? offset_x : '0px'};
         --offset-y: ${offset_y ? offset_y : '6px'};
         --blur: ${blur ? blur : '30px'};
-        --shadow-color: ${shadow_color ? shadow_color : 'var(--pimary-color)'};
-        --shadow-opacity: ${shadow_opacity ? shadow_opacity : '1'};
+        --shadow-color: ${shadow_color ? shadow_color : 'var(--primary-color)'};
+        --shadow-opacity: ${shadow_opacity ? shadow_opacity : '0'};
         --box-shadow: var(--offset_x) var(--offset-y) var(--blur) hsla( var(--shadow-color), var(--shadow-opacity) );
+        --avatar-width: ${avatar_width ? avatar_width : 'var(--primary-avatar-width)'};
+        --avatar-height: ${avatar_height ? avatar_height : 'var(--primary-avatar-height)'};
+        --avatar-radius: ${avatar_radius ? avatar_radius : 'var(--primary-avatar-radius)'};
         display: inline-grid;
-        grid-auto-flow: column;
-        grid-column-gap: 5px;
-        justify-content: center;
-        align-items: center;
-        ${width && 'width: var(--width)'};
-        ${height && 'height: var(--height)'};
+        ${grid.button ? make_grid(grid.button) : make_grid({auto: {auto_flow: 'column'}, gap: '5px', justify: 'content-center', align: 'items-center'})}
+        ${width && 'width: var(--width);'};
+        ${height && 'height: var(--height);'};
+        max-width: 100%;
         font-size: var(--size);
-        font-weight: var(--bold);
+        font-weight: var(--weight);
         color: hsl( var(--color) );
         background-color: hsla( var(--bg-color), var(--opacity) );
         border: var(--border);
         border-radius: var(--border-radius);
         box-shadow: var(--box-shadow);
         padding: var(--padding);
-        transition: font-size .3s, color .3s, background-color .3s ease-in-out;
+        transition: font-size .3s, font-weight .15s, color .3s, background-color .3s, opacity .3s, border .3s, box-shadow .3s ease-in-out;
         cursor: pointer;
+        -webkit-mask-image: -webkit-radial-gradient(white, black);
     }
-    :host(i-button:hover), :host(i-button[role]:hover) {
-        --weight: ${weight_hover ? weight_hover : 'initial'};
-        --color: ${color_hover ? color_hover : 'var(--color-white)'};
-        --bg-color: ${bg_color_hover ? bg_color_hover : 'var(--primary-color)'};
-        --border-color: ${border_color_hover ? border_color_hover : 'var(--primary-color)'};
+    :host(i-button:hover) {
+        --size: ${size_hover ? size_hover : 'var(--primary-size-hover)'};
+        --weight: ${weight_hover ? weight_hover : 'var(--primary-weight-hover)'};
+        --color: ${color_hover ? color_hover : 'var(--primary-color-hover)'};
+        --bg-color: ${bg_color_hover ? bg_color_hover : 'var(--primary-bg-color-hover)'};
+        --border-color: ${border_color_hover ? border_color_hover : 'var(--primary-color-hover)'};
         --offset-x: ${offset_x_hover ? offset_x_hover : '0'};
         --offset-y: ${offset_y_hover ? offset_y_hover : '0'};
         --blur: ${blur_hover ? blur_hover : '50px'};
-        --shadow-color: ${shadow_color_hover ? shadow_color_hover : 'var(--pimary-color)'};
-        --shadow-opacity: ${shadow_opacity_hover ? shadow_opacity_hover : '.25'};
-        font-size: var(--size-hover);
+        --shadow-color: ${shadow_color_hover ? shadow_color_hover : 'var(--primary-color-hover)'};
+        --shadow-opacity: ${shadow_opacity_hover ? shadow_opacity_hover : '0'};
     }
+    :host(i-button:hover:foucs:active) {
+        --bg-color: ${bg_color ? bg_color : 'var(--primary-bg-color)'};
+    }
+    :host(i-button:focus) {
+        --color: var(--color-focus);
+        --bg-color: var(--bg-color-focus);
+        background-color: hsla(var(--bg-color));
+    }  
     :host(i-button) g {
-        fill: hsl(var(--fill));
-        transition: fill 0.3s ease-in-out;
+        --icon-fill: ${icon_fill ? icon_fill : 'var(--primary-icon-fill)'};
+        fill: hsl(var(--icon-fill));
+        transition: fill 0.05s ease-in-out;
     }
     :host(i-button:hover) g {
-        --fill-hover: ${fill_hover ? fill_hover : 'var(--color-white)'};
-        fill: hsl(var(--fill-hover));
+        --icon-fill: ${icon_fill_hover ? icon_fill_hover : 'var(--primary-icon-fill-hover)'};
     }
-    :host(i-button[role="button"])  {
-
-    }
-    :host(i-button) .col2 {
-        display: grid;
-        grid-auto-flow: column;
-        justify-content: center;
-        align-items: center;
-        column-gap: 8px;
-    }
-    :host(i-button) .icon {
+    :host(i-button) .avatar {
         display: block;
-        width: var(---icon-size);
-        height: var(---icon-size);
+        width: var(--avatar-width);
+        height: var(--avatar-height);
+        max-width: 100%;
+        border-radius: var(--avatar-radius);
+        -webkit-mask-image: -webkit-radial-gradient(white, black);
+        overflow: hidden;
+        transition: width .3s, height .3s ease-in-out;
+        ${make_grid(grid.avatar)}
     }
-    :host(i-button) .right .icon {
-        grid-column-start: 2;
+    :host(i-button) img {
+        --scale: ${scale ? scale : '1'};
+        width: 100%;
+        height: 100%;
+        transform: scale(var(--scale));
+        transition: transform 0.3s, scale 0.3s linear;
+        object-fit: cover;
+        border-radius: var(--avatar-radius);
     }
-    :host(i-button) .left .icon {
-        grid-column-start: 1;
+    :host(i-button:hover) img {
+        --scale: ${scale_hover ? scale_hover : '1.2'};
+        transform: scale(var(--scale));
     }
     :host(i-button) svg {
         width: 100%;
         height: auto;
     }
-    :host(i-button[role="tab"])  {
-        --size: ${size ? size : 'initial'};
+    :host(i-button[aria-expanded="true"]:focus) {
+        --color: var(--color-focus);
+        --bg-color: var(--bg-color-focus);
+    } 
+    :host(i-button[role="tab"]) {
         --width: ${width ? width : '100%'};
-        --color: ${color ? color : 'var(--primary-color)'};
-        --bg-color: ${bg_color ? bg_color : 'var(--color-white)'};
         --border-radius: ${border_radius ? border_radius : '0'};
-        --border-width: ${border_width ? border_width : '0'};
-        --border-style: ${border_style ? border_style : 'solid'};
-        --border-color: ${border_color ? border_color : 'var(--primary-color)'};
-        width: var(--width);
     }
     :host(i-button[role="switch"]) {
-        --width: ${width ? width : 'unset'};
-        --color: ${color ? color : 'var(--primary-color)'};
-        --bg-color: ${bg_color ? bg_color : 'var(--color-white)'};
-        --border-radius: ${border_radius ? border_radius : '8px'};
-        --border-width: ${border_width ? border_width : '0'};
-        --border-style: ${border_style ? border_style : 'solid'};
-        --border-color: ${border_color ? border_color : 'var(--primary-color)'};
-        width: var(--width);
+        --size: ${size ? size : 'var(--primary-size)'};
+    }
+    :host(i-button[role="switch"]:hover) {
+        --size: ${size_hover ? size_hover : 'var(--primary-size-hover)'};
+    }
+    :host(i-button[role="switch"]:focus) {
+        --color: var(--color-focus);
+        --bg-color: var(--bg-color-focus);
     }
     :host(i-button[role="listbox"]) {
-        --width: ${width ? width : 'unset'};
-        --color: ${color ? color : 'var(--primary-color)'};
-        --bg-color: ${bg_color ? bg_color : 'var(--color-white)'};
-        --border-radius: ${border_radius ? border_radius : '8px'};
-        --border-width: ${border_width ? border_width : '0'};
-        --border-style: ${border_style ? border_style : 'solid'};
-        --border-color: ${border_color ? border_color : 'var(--primary-color)'};
-        width: var(--width);
+        --color: ${listbox_collapsed_listbox_color ? listbox_collapsed_listbox_color : 'var(--listbox-collapsed-listbox-color)'};
+        --size: ${listbox_collapsed_listbox_size ? listbox_collapsed_listbox_size : 'var(--listbox-collapsed-listbox-size)'};
+        --weight: ${listbox_collapsed_listbox_weight ? listbox_collapsed_listbox_weight : 'var(--listbox-collapsed-listbox-weight)'};
+        --bg-color: ${listbox_collapsed_bg_color ? listbox_collapsed_bg_color : 'var(--listbox-collapsed-bg-color)'};
+    }
+    :host(i-button[role="listbox"]:hover) {
+        --color: ${listbox_collapsed_listbox_color_hover ? listbox_collapsed_listbox_color_hover : 'var(--listbox-collapsed-listbox-color-hover)'};
+        --size: ${listbox_collapsed_listbox_size_hover ? listbox_collapsed_listbox_size_hover : 'var(--listbox-collapsed-listbox-size-hover)'};
+        --weight: ${listbox_collapsed_listbox_weight_hover ? listbox_collapsed_listbox_weight_hover : 'var(--listbox-collapsed-listbox-weight-hover)'};
+        --bg-color: ${listbox_collapsed_bg_color_hover ? listbox_collapsed_bg_color_hover : 'var(--listbox-collapsed-bg-color-hover)'};
+    }
+    :host(i-button[role="listbox"]:focus), :host(i-button[role="listbox"][aria-expanded="true"]:focus) {
+        --color: var(--color-focus);
+        --bg-color: var(--bg-color-focus);
+    }
+    :host(i-button[role="listbox"]) > .icon {
+        ${grid.icon ? make_grid(grid.icon) : make_grid({column: '2'})}
+    }
+    :host(i-button[role="listbox"]) .text {}
+    :host(i-button[role="listbox"]) .avatar {
+        --avatar-width: ${listbox_collapsed_listbox_avatar_width ? listbox_collapsed_listbox_avatar_width : 'var(--listbox-collapsed-listbox-avatar-width)'};
+        --avatar-height: ${listbox_collapsed_listbox_avatar_height ? listbox_collapsed_listbox_avatar_height : 'var(--listbox-collapsed-listbox-avatar-height)'}
+    }
+    :host(i-button[role="listbox"][aria-expanded="true"]),
+    :host(i-button[role="listbox"][aria-expanded="true"]:hover) {
+        --size: ${listbox_expanded_listbox_size ? listbox_expanded_listbox_size : 'var(--listbox-expanded-listbox-size)'};
+        --color: ${listbox_expanded_listbox_color ? listbox_expanded_listbox_color : 'var(--listbox-expanded-listbox-color)'};
+        --weight: ${listbox_expanded_listbox_weight ? listbox_expanded_listbox_weight : 'var(--listbox-expanded-listbox-weight)'};
+        --bg-color: ${listbox_expanded_bg_color ? listbox_expanded_bg_color : 'var(--listbox-expanded-bg-color)'}
+    }
+    :host(i-button[role="listbox"][aria-expanded="true"]) .avatar {
+        --avatar-width: ${listbox_expanded_listbox_avatar_width ? listbox_expanded_listbox_avatar_width : 'var(--listbox-expanded-listbox-avatar-width)'};
+        --avatar-height: ${listbox_expanded_listbox_avatar_height ? listbox_expanded_listbox_avatar_height : 'var(--listbox-expanded-listbox-avatar-height)'};
+    }
+    :host(i-button[role="option"]) {
+        --border-radius: ${border_radius ? border_radius : '0'};
+        --opacity: ${opacity ? opacity : '0'};
+    }
+    :host(i-button[role="option"][aria-current="true"]), :host(i-button[role="option"][aria-current="true"]:hover) {
+        --size: ${current_size ? current_size : 'var(--current-list-size)'};
+        --color: ${current_color ? current_color : 'var(--current-list-color)'};
+        --bg-color: ${current_bg_color ? current_bg_color : 'var(--current-list-bg-color)'};
+        --opacity: ${opacity ? opacity : '0'}
+    }
+    :host(i-button[role="option"][aria-current="true"]:focus) {
+        --color: var(--color-focus);
+        --bg-color: var(--bg-color-focus);
+    }
+    :host(i-button[role="option"][disabled]), :host(i-button[role="option"][disabled]:hover) {
+        --size: ${disabled_size ? disabled_size : 'var(--primary-disabled-size)'};
+        --color: ${disabled_color ? disabled_color : 'var(--primary-disabled-color)'};
+        --bg-color: ${disabled_bg_color ? disabled_bg_color : 'var(--primary-disabled-bg-color)'};
+        --opacity: ${opacity ? opacity : '0'}
+    }
+    :host(i-button[aria-disabled="true"]) .icon, 
+    :host(i-button[aria-disabled="true"]:hover) .icon,
+    :host(i-button[role="option"][aria-disabled="true"]) .icon, 
+    :host(i-button[role="option"][aria-disabled="true"]:hover) .icon,
+    :host(i-button[role="listbox"][aria-disabled="true"]) .icon, 
+    :host(i-button[role="listbox"][aria-disabled="true"]:hover) .icon {
+        --icon-size: ${disabled_icon_size ? disabled_icon_size : 'var(--primary-disabled-icon-size)'};
+    }
+    :host(i-button[disabled]:hover) img {
+        transform: scale(1);
     }
     :host(i-button[aria-current="true"]), :host(i-button[aria-current="true"]:hover) {
-        --bold: ${current_weight ? current_weight : 'initial'};
-        --color: ${current_color ? current_color : 'var(--color-white)'};
-        --bg-color: ${current_bg_color ? current_bg_color : 'var(--primary-color)'};
-        font-size: var(--current_size);
+        --size: ${current_size ? current_size : 'var(--current-size)'};
+        --weight: ${current_weight ? current_weight : 'var(--current-weight)'};
+        --color: ${current_color ? current_color : 'var(--current-color)'};
+        --bg-color: ${current_bg_color ? current_bg_color : 'var(--current-bg-color)'};
+    }
+    :host(i-button[aria-current="true"]) .icon,  :host(i-button[aria-current="true"]:hover) .icon {
+        --icon-size: ${current_icon_size ? current_icon_size : 'var(--current-icon-size)'};
     }
     :host(i-button[aria-current="true"]) g {
-        --fill: ${fill ? fill : 'var(--color-white)'};
+        --icon-fill: ${current_icon_fill ? current_icon_fill : 'var(--current-icon-fill)'};
+    }
+    :host(i-button[aria-current="true"]:focus) {
+        --color: var(--color-focus);
+        --bg-color: var(--bg-color-focus);
+    }
+    :host(i-button[role="option"][aria-current="true"][aria-selected="true"]) .option > .icon, 
+    :host(i-button[role="option"][aria-current="true"][aria-selected="true"]:hover) .option > .icon {
+        --icon-size: ${current_icon_size ? current_icon_size : 'var(--current-icon-size)'};
     }
     :host(i-button[aria-checked="true"]), :host(i-button[aria-expanded="true"]),
     :host(i-button[aria-checked="true"]:hover), :host(i-button[aria-expanded="true"]:hover) {
-        --bold: ${current_weight ? current_weight : 'initial'};
-        --color: ${current_color ? current_color : 'var(--color-white)'};
-        --bg-color: ${current_bg_color ? current_bg_color : 'var(--primary-color)'};
+        --size: ${current_size ? current_size : 'var(--current-size)'};
+        --weight: ${current_weight ? current_weight : 'var(--current-weight)'};
+        --color: ${current_color ? current_color : 'var(--current-color)'};
+        --bg-color: ${current_bg_color ? current_bg_color : 'var(--current-bg-color)'};
     }
-    :host(i-button[aria-checked="true"]) g {
-        --fill: ${current_fill ? current_fill : 'var(--color-white)' };
+    /*
+    :host(i-button[role="switch"][aria-expanded="true"]) g {
+        --icon-fill: var(--current-icon-fill);
+    }*/
+    /* listbox collapsed */
+    :host(i-button[role="listbox"]) > .icon {
+        --icon-size: ${listbox_collapsed_icon_size ? listbox_collapsed_icon_size : 'var(--listbox-collapsed-icon-size)'};
+    }
+    :host(i-button[role="listbox"]:hover) > .icon {
+        --icon-size: ${listbox_collapsed_icon_size_hover ? listbox_collapsed_icon_size_hover : 'var(--listbox-collapsed-icon-size-hover)'};
+    }
+    :host(i-button[role="listbox"]) .listbox > .icon {
+        --icon-size: ${listbox_collapsed_listbox_icon_size ? listbox_collapsed_listbox_icon_size : 'var(--listbox-collapsed-listbox-icon-size)'};
+    }
+    :host(i-button[role="listbox"]:hover) .listbox > .icon {
+        --icon-size: ${listbox_collapsed_listbox_icon_size_hover ? listbox_collapsed_listbox_icon_size_hover : 'var(--listbox-collapsed-listbox-icon-size-hover)'};
+    }
+    :host(i-button[role="listbox"]) > .icon g {
+        --icon-fill: ${listbox_collapsed_icon_fill ? listbox_collapsed_icon_fill : 'var(--listbox-collapsed-icon-fill)'};
+    }
+    :host(i-button[role="listbox"]:hover) > .icon g {
+        --icon-fill: ${listbox_collapsed_icon_fill_hover ? listbox_collapsed_icon_fill_hover : 'var(--listbox-collapsed-icon-fill-hover)'};
+    }
+    :host(i-button[role="listbox"]) .listbox > .icon g {
+        --icon-fill: ${listbox_collapsed_listbox_icon_fill ? listbox_collapsed_listbox_icon_fill : 'var(--listbox-collaps-listbox-icon-fill)'};
+    }
+    :host(i-button[role="listbox"]:hover) .listbox > .icon g {
+        --icon-fill: ${listbox_collapsed_listbox_icon_fill_hover ? listbox_collapsed_listbox_icon_fill_hover : 'var(--listbox-collapsed-listbox-icon-fill-hover)'};
+    }
+    /* listbox expanded */
+    :host(i-button[role="listbox"][aria-expanded="true"]) > .icon,
+    :host(i-button[role="listbox"][aria-expanded="true"]:hover) > .icon {
+        --icon-size: ${listbox_expanded_icon_size ? listbox_expanded_icon_size : 'var(--listbox-expanded-icon-size)'};
+    }
+    :host(i-button[role="listbox"][aria-expanded="true"]) > .icon g, 
+    :host(i-button[role="listbox"][aria-expanded="true"]:hover) > .icon g {
+        --icon-fill: ${listbox_expanded_icon_fill ? listbox_expanded_icon_fill : 'var(--listbox-expanded-icon-fill)'}
+    }
+    :host(i-button[role="listbox"][aria-expanded="true"]) .listbox > .icon, 
+    :host(i-button[role="listbox"][aria-expanded="true"]:hover) .listbox > .icon {
+        --icon-fill: ${listbox_expanded_listbox_icon_size ? listbox_expanded_listbox_icon_size : 'var(--listbox-expanded-listbox-icon-size)'};
+    }
+    :host(i-button[role="listbox"][aria-expanded="true"]) .listbox > .icon g,
+    :host(i-button[role="listbox"][aria-expanded="true"]:hover) .listbox > .icon g {
+        --icon-fill: ${listbox_expanded_listbox_icon_fill ? listbox_expanded_listbox_icon_fill : 'var(--listbox-expanded-listbox-icon-fill)'};
+    }
+    :host(i-button[aria-checked="true"]) > .icon g {
+        --icon-fill: ${current_icon_fill ? current_icon_fill : 'var(--color-white)' };
     }
     :host(i-button[disabled]), :host(i-button[disabled]:hover) {
-        --color: ${color ? color : 'var(--color-dark)'};
-        --bg-color: ${bg_color ? bg_color : 'var(--color-white)'};
-        --color-opacity: .6;
-        --bg-color-opacity: .3;
-        color: hsla(var(--color), var(--color-opacity));
-        background-color: hsla(var(--bg-color), var(--bg-color-opacity));
-        pointer-events: none;
+        --size: ${disabled_size ? disabled_size : 'var(--primary-disabled-size)'};
+        --color: ${disabled_color ? disabled_color : 'var(--primary-disabled-color)'};
+        --bg-color: ${disabled_bg_color ? disabled_bg_color : 'var(--primary-disabled-bg-color)'};
         cursor: not-allowed;
     }
-    :host(i-button[role="option"]) {
-        display: grid;
-        grid-template-rows: 24px;
-        grid-template-columns: 20px auto;
-        justify-content: left;
+    :host(i-button[disabled]) g, 
+    :host(i-button[disabled]:hover) g, 
+    :host(i-button[role="option"][disabled]) > .icon g, 
+    :host(i-button[role="option"][disabled]) .option > .icon g,
+    :host(i-button[role="listbox"][disabled]) .option > .icon g, 
+    :host(i-button[role="option"][disabled]:hover) > .icon g,
+    :host(i-button[role="listbox"][disabled]:hover) .option > .icon g, 
+    :host(i-button[role="option"][disabled]:hover) .option > .icon g {
+        --icon-fill: ${disabled_color ? disabled_color : 'var(--primary-disabled-icon-fill)'};
     }
-    :host(i-button[role="option"]) .text {
+    :host(i-button[role="menuitem"]) {
+        --size: ${size ? size : 'var(--menu-size)'};
+        --weight: ${weight ? weight : 'var(--menu-weight)'};
+        --color: ${color ? color : 'var(--menu-color)'};
+        --border-radius: 0;
+        background-color: transparent;
+    }
+    :host(i-button[role="menuitem"]:hover) {
+        --size: ${size_hover ? size_hover : 'var(--menu-size-hover)'};
+        --weight: ${weight_hover ? weight_hover : 'var(--menu-weight-hover)'};
+        --color: ${color_hover ? color_hover : 'var(--menu-color-hover)'};
+    }
+    :host(i-button[role="menuitem"]:focus) {
+        --color: var(--color-focus);
+        --bg-color: var(--bg-color-focus);
+    }
+    :host(i-button[role="menuitem"]) .avatar {
+        --avatar-width: ${avatar_width ? avatar_width : 'var(--menu-avatar-width)'};
+        --avatar-height: ${avatar_height ? avatar_height : 'var(--menu-avatar-height)'};
+        --avatar-radius: ${avatar_radius ? avatar_radius : 'var(--menu-avatar-radius)'};
+    }
+    :host(i-button[role="menuitem"]:hover) .avatar {
+        --avatar-width: ${avatar_width_hover ? avatar_width_hover : 'var(--menu-avatar-width-hover)'};
+        --avatar-height: ${avatar_height_hover ? avatar_height_hover : 'var(--menu-avatar-height-hover)'};
+    }
+    :host(i-button[role="menuitem"][disabled]), :host(i-button[role="menuitem"][disabled]):hover {
+        --size: ${disabled_size ? disabled_size : 'var(--menu-disabled-size)'};
+        --color: ${disabled_color ? disabled_color : 'var(--menu-disabled-color)'};
+        --weight: ${disabled_weight ? disabled_weight : 'var(--menu-disabled-weight)'};
+    }
+    :host(i-button[role="menuitem"][disabled]) g ,
+    :host(i-button[role="menuitem"][disabled]:hover) g {
+        --icon-fill: ${disabled_icon_fill ? disabled_icon_fill : 'var(--primary-disabled-icon-fill)'};
+    }
+    :host(i-button[role="option"]) > .icon {
+        --icon-size: ${list_selected_icon_size ? list_selected_icon_size : 'var(--list-selected-icon-size)'};
+    }
+    :host(i-button[role="option"]:hover) > .icon {
+        --icon-size: ${list_selected_icon_size_hover ? list_selected_icon_size_hover : 'var(--list-selected-icon-size-hover)'};
+    }
+    :host(i-button[role="option"]) > .icon g {
+        --icon-fill: ${list_selected_icon_fill ? list_selected_icon_fill : 'var(--list-selected-icon-fill)'};
+    }
+    :host(i-button[role="option"]:hover) > .icon g {
+        --icon-fill: ${list_selected_icon_fill_hover ? list_selected_icon_fill_hover : 'var(--list-selected-icon-fill-hover)'};
+    }
+    :host(i-button[role="option"][aria-current="true"]) > .icon, 
+    :host(i-button[role="option"][aria-current="true"]:hover) > .icon {
+        --icon-size: ${current_list_selected_icon_size ? current_list_selected_icon_size : 'var(--current-list-selected-icon-size)'};
+    }
+    :host(i-button[role="option"][aria-current="true"]) > .icon g, 
+    :host(i-button[role="option"][aria-current="true"]:hover) > .icon g { 
+        --icon-fill: ${current_list_selected_icon_fill ? current_list_selected_icon_fill : 'var(--current-list-selected-icon-fill)'};
+    }
+    :host(i-button[role="option"][aria-selected="false"]) > .icon {
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+    :host(i-button[role="option"][aria-selected="true"]) > .icon {
+        opacity: 1;
+    }
+    /* define grid */
+    :host(i-button) .text {
+        ${make_grid(grid.text)}
+    }
+    :host(i-button) .icon {
+        --icon-size: ${icon_size ? icon_size : 'var(--primary-icon-size)'};
         display: block;
-        grid-column-start: 2;
+        width: var(--icon-size);
+        transition: width 0.25s ease-in-out;
+        ${make_grid(grid.icon)}
     }
-    :host(i-button[role="option"]:hover) g {
-        --fill-hover: ${fill_hover ? fill_hover : 'var(--primary-color)'};
+    :host(i-button:hover) .icon {
+        --icon-size: ${icon_size_hover ? icon_size_hover : 'var(--primary-icon-size-hover)'};
     }
-    :host(i-button[role="option"][aria-selected="false"]) .icon {
-        display: none;
+    :host(i-button) .listbox {
+        display: grid;
+        max-width: 100%;
+        ${make_grid(grid_listbox)}
+    }
+    :host(i-button) .option {
+        display: grid;
+        max-width: 100%;
+        ${make_grid(grid_option)}
+    }
+    :host(i-button) .option > .icon {
+        ${make_grid(grid.option_icon)}
+    }
+    :host(i-button) .option > .avatar {
+        ${make_grid(grid.option_avatar)}
+    }
+    :host(i-button) .option > .text {
+        ${make_grid(grid.option_text)}
     }
     ${custom_style}
     `
@@ -1300,16 +1742,114 @@ function i_button (option, protocol) {
     return widget()
 }
 }).call(this)}).call(this,"/node_modules/datdot-ui-button/src/index.js")
-},{"message_maker":25,"path":36,"support-style-sheet":26}],25:[function(require,module,exports){
-module.exports = function message_maker (from) {
-    let msg_id = 0
-    return function make ({to, type, data = null, refs = []}) {
-        const stack = (new Error().stack.split('\n').slice(2).filter(x => x.trim()))
-        const message = { head: [from, to, ++msg_id], refs, type, data, meta: { stack }}
-        return message
+},{"datdot-ui-icon":29,"make-element":25,"make-grid":26,"make-image":27,"message-maker":34,"support-style-sheet":28}],25:[function(require,module,exports){
+module.exports = make_element
+
+function make_element({name = '', classlist = null, role }) {
+    const el = document.createElement(name)
+    if (classlist) set_class()
+    if (role) set_role()
+    return el
+
+    function set_class () {
+        el.className = classlist
+    }
+    
+    function set_role () {
+        const tabindex = role.match(/button|switch/) ? 0 : -1
+        el.setAttribute('role', role)
+        el.setAttribute('tabindex',  tabindex)
     }
 }
+
+
 },{}],26:[function(require,module,exports){
+module.exports = make_grid
+
+function make_grid (opts = {}) {
+    const {areas, area, rows, columns, row, auto = {}, column, gap, justify, align} = opts
+    let style = ''
+    grid_init ()
+    return style
+
+    function grid_init () {
+        make_rows()
+        make_columns()
+        make_auto()
+        make_row()
+        make_column()
+        make_justify()
+        make_align()
+        make_gap()
+        make_area()
+        make_areas()
+    }
+     
+    function make_areas () {
+        if (typeof areas === 'object') {
+            let template = `grid-template-areas:`
+            areas.map( a => template += `"${a}"`)
+            return style += template + ';'
+        }
+        if (typeof areas === 'string') return areas ? style +=`grid-template-areas: "${areas}";` : ''
+    }
+    function make_area () {
+        return area ? style += `grid-area: ${area};` : ''
+    }
+
+    function make_rows () { 
+        return rows ? style +=  `grid-template-rows: ${rows};` : ''
+    }
+
+    function make_columns () {
+        return columns ? style += `grid-template-columns: ${columns};` : ''
+    }
+
+    function make_row () {
+        return row ? style += `grid-row: ${row};` : ''
+    }
+
+    function make_column () {
+        return column ? style += `grid-column: ${column};` : ''
+    }
+
+    function make_justify () {
+        if (justify === void 0) return
+        const result = justify.split('-')
+        const [type, method] = result
+        return style += `justify-${type}: ${method};`
+    }
+
+    function make_align () {
+        if (align === void 0) return
+        const result = align.split('-')
+        const [type, method] = result
+        return style += `align-${type}: ${method};`
+    }
+
+    function make_gap () {
+        if (gap === void 0) return ''
+        return style += `gap: ${gap};`
+    }
+
+    function make_auto () {
+        const {auto_flow = null, auto_rows = null, auto_columns = null} = auto
+        const grid_auto_flow = auto_flow ? `grid-auto-flow: ${auto_flow};` : ''
+        const grid_auto_rows = auto_rows ? `grid-auto-rows: ${auto_rows};` : ''
+        const grid_auto_columns = auto_columns ? `grid-auto-columns: ${auto_columns};` : ''
+        return style += `${grid_auto_flow}${grid_auto_rows}${grid_auto_columns}`
+    }
+}
+},{}],27:[function(require,module,exports){
+module.exports = img
+
+function img ({src, alt}) {
+    const img = document.createElement('img')
+    img.setAttribute('src', src)
+    img.setAttribute('alt', alt)
+    return img
+}
+},{}],28:[function(require,module,exports){
 module.exports = support_style_sheet
 function support_style_sheet (root, style) {
     return (() => {
@@ -1325,11 +1865,34 @@ function support_style_sheet (root, style) {
         }
     })()
 }
-},{}],27:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
+(function (__filename){(function (){
 const style_sheet = require('support-style-sheet')
 const svg = require('svg')
+const message_maker = require('message-maker')
 
-module.exports = ({name, path, is_shadow = false, theme}) => {
+var id = 0
+
+module.exports = ({name, path, is_shadow = false, theme}, parent_protocol) => {
+// ---------------------------------------------------------------
+    const myaddress = `${__filename}-${id++}`
+    const inbox = {}
+    const outbox = {}
+    const recipients = {}
+    const names = {}
+    const message_id = to => (outbox[to] = 1 + (outbox[to]||0))
+
+    const {notify, address} = parent_protocol(myaddress, listen)
+    names[address] = recipients['parent'] = { name: 'parent', notify, address, make: message_maker(myaddress) }
+    notify(recipients['parent'].make({ to: address, type: 'ready', refs: ['old_logs', 'new_logs'] }))
+
+    function listen (msg) {
+        const {head, refs, type, data, meta } = msg
+        inbox[head.join('/')] = msg                  // store msg
+        const [from, to, msg_id] = head    
+        console.log('New message', { msg })
+    }
+ // ---------------------------------------------------------------   
     const url = path ? path : './src/svg'
     const symbol = svg(`${url}/${name}.svg`)
     if (is_shadow) {
@@ -1341,8 +1904,16 @@ module.exports = ({name, path, is_shadow = false, theme}) => {
             style_sheet(shadow, style)
             slot.append(symbol)
             shadow.append(slot)
+            shadow.addEventListener('click', handleOnClick)
             return icon
         }
+
+        function handleOnClick (e) {
+            console.log('Click', e)
+            const { notify, address, make } = recipients['parent']
+            notify(make({ to: address, type: 'click', data: { event: e }, refs: {} }))
+        }
+
         // insert CSS style
         const custom_style = theme ? theme.style : ''
         // set CSS variables
@@ -1381,9 +1952,10 @@ module.exports = ({name, path, is_shadow = false, theme}) => {
     return symbol
 }
 
-},{"support-style-sheet":28,"svg":29}],28:[function(require,module,exports){
-arguments[4][26][0].apply(exports,arguments)
-},{"dup":26}],29:[function(require,module,exports){
+}).call(this)}).call(this,"/node_modules/datdot-ui-icon/src/index.js")
+},{"message-maker":34,"support-style-sheet":30,"svg":31}],30:[function(require,module,exports){
+arguments[4][28][0].apply(exports,arguments)
+},{"dup":28}],31:[function(require,module,exports){
 module.exports = svg
 function svg (path) {
     const span = document.createElement('span')
@@ -1397,42 +1969,46 @@ function svg (path) {
     }
     return span
 }   
-},{}],30:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
+(function (__filename){(function (){
 const bel = require('bel')
 const style_sheet = require('support-style-sheet')
-const message_maker = require('message_maker')
+const message_maker = require('message-maker')
+
+var id = 0
 
 module.exports = i_log
-function i_log (protocol, to = 'Test for a long component name / demo / demo.js') {
-    const send = protocol(get)
-    const make = message_maker(`ui-logs / i_log / index.js`)
-    const message = make({to, type: 'ready', refs: ['old_logs', 'new_logs']})
-    send(message)
-    // send({from: 'logs', flow: 'logs-layout', type: 'ready', fn: 'logs', line: 8})
+
+function i_log (parent_protocol) {
     const i_log = document.createElement('i-log')
     const shadow = i_log.attachShadow({mode: 'closed'})
     const title = bel`<h4>Logs</h4>`
     const content = bel`<section class="content">${title}</section>`
-    const log_list = document.createElement('log-list')
-    style_sheet(shadow, style)
-    content.append(log_list)
-    shadow.append(content)
-    document.addEventListener('DOMContentLoaded', () => { log_list.scrollTop = log_list.scrollHeight })
+    const logList = document.createElement('log-list')
+    // ---------------------------------------------------------------
+    const myaddress = `${__filename}-${id++}`
+    const inbox = {}
+    const outbox = {}
+    const recipients = {}
+    const names = {}
+    const message_id = to => (outbox[to] = 1 + (outbox[to]||0))
 
-    return i_log
+    const {notify, address} = parent_protocol(myaddress, listen)
+    names[address] = recipients['parent'] = { name: 'parent', notify, address, make: message_maker(myaddress) }
 
-    function get (msg) {
-        // const {page = 'Demo', from, flow, type, body, fn, file, line} = msg
-        const {head, refs, type, data, meta} = msg
+    notify(recipients['parent'].make({ to: address, type: 'ready', refs: {} }))
+
+    function listen (msg) {
         try {
+            const { head, refs, type, data, meta } = msg // listen to msg
+            inbox[head.join('/')] = msg                  // store msg
             const from = bel`<span aria-label=${head[0]} class="from">${head[0]}</span>`
             const to = bel`<span aria-label="to" class="to">${head[1]}</span>`
-            const data_info = bel`<span aira-label="data" class="data">data: ${typeof data === 'object' ? JSON.stringify(data) : data}</span>`
+            const data_info = bel`<span aria-label="data" class="data">data: ${typeof data === 'object' ? JSON.stringify(data) : data}</span>`
             const type_info = bel`<span aria-type="${type}" aria-label="${type}"  class="type">${type}</span>`
             const refs_info = bel`<div class="refs">refs: </div>`
-            refs.map( (ref, i) => refs_info.append(bel`<span aria-label="${ref}">${ref}${i < refs.length - 1 ? ', ' : ''}</span>`))
-            const log = bel`
-            <div class="log">
+            Object.keys(refs).map( (key, i) => refs_info.append(bel`<span aria-label="${refs[key]}">${refs[key]}${i <  Object.keys(refs).length - 1 ? ', ' : ''}</span>`))
+            const log = bel`<div class="log">
                 <div class="head">
                     ${from}
                     ${type_info}
@@ -1441,8 +2017,8 @@ function i_log (protocol, to = 'Test for a long component name / demo / demo.js'
                 ${data_info}
                 ${refs_info}
             </div>`
-            var list = bel`
-            <aside class="list">
+            
+            var list = bel`<aside class="list">
                 ${log}
                 <div class="file">
                     <span>${meta.stack[0]}</span>
@@ -1450,13 +2026,21 @@ function i_log (protocol, to = 'Test for a long component name / demo / demo.js'
                 </div>
             </aside>
             `
-            log_list.append(list)
-            log_list.scrollTop = log_list.scrollHeight
+            logList.append(list)
+            logList.scrollTop = logList.scrollHeight
         } catch (error) {
-            document.addEventListener('DOMContentLoaded', () => log_list.append(list))
+            console.log({error})
+            document.addEventListener('DOMContentLoaded', () => logList.append(list))
             return false
         }
     }
+// ---------------------------------------------------------------
+    style_sheet(shadow, style)
+    content.append(logList)
+    shadow.append(content)
+    document.addEventListener('DOMContentLoaded', () => { logList.scrollTop = logList.scrollHeight })
+
+    return i_log
 }
 
 const style = `
@@ -1605,11 +2189,18 @@ log-list .list:last-child .function {
     color: white;
 }
 `
-},{"bel":4,"message_maker":31,"support-style-sheet":32}],31:[function(require,module,exports){
-arguments[4][25][0].apply(exports,arguments)
-},{"dup":25}],32:[function(require,module,exports){
-arguments[4][26][0].apply(exports,arguments)
-},{"dup":26}],33:[function(require,module,exports){
+}).call(this)}).call(this,"/node_modules/datdot-ui-logs/src/index.js")
+},{"bel":4,"message-maker":34,"support-style-sheet":33}],33:[function(require,module,exports){
+arguments[4][28][0].apply(exports,arguments)
+},{"dup":28}],34:[function(require,module,exports){
+module.exports = function message_maker (from) {
+  let msg_id = 0
+  return function make ({to, type, data = null, refs = {} }) {
+      const stack = (new Error().stack.split('\n').slice(2).filter(x => x.trim()))
+      return { head: [from, to, msg_id++], refs, type, data, meta: { stack }}
+  }
+}
+},{}],35:[function(require,module,exports){
 module.exports = attributeToProperty
 
 var transform = {
@@ -1630,7 +2221,7 @@ function attributeToProperty (h) {
   }
 }
 
-},{}],34:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var attrToProp = require('hyperscript-attribute-to-property')
 
 var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
@@ -1927,7 +2518,7 @@ var closeRE = RegExp('^(' + [
 ].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
 function selfClosing (tag) { return closeRE.test(tag) }
 
-},{"hyperscript-attribute-to-property":33}],35:[function(require,module,exports){
+},{"hyperscript-attribute-to-property":35}],37:[function(require,module,exports){
 var inserted = {};
 
 module.exports = function (css, options) {
@@ -1951,801 +2542,106 @@ module.exports = function (css, options) {
     }
 };
 
-},{}],36:[function(require,module,exports){
-(function (process){(function (){
-// 'path' module extracted from Node.js v8.11.1 (only the posix part)
-// transplited with Babel
-
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-'use strict';
-
-function assertPath(path) {
-  if (typeof path !== 'string') {
-    throw new TypeError('Path must be a string. Received ' + JSON.stringify(path));
-  }
-}
-
-// Resolves . and .. elements in a path with directory names
-function normalizeStringPosix(path, allowAboveRoot) {
-  var res = '';
-  var lastSegmentLength = 0;
-  var lastSlash = -1;
-  var dots = 0;
-  var code;
-  for (var i = 0; i <= path.length; ++i) {
-    if (i < path.length)
-      code = path.charCodeAt(i);
-    else if (code === 47 /*/*/)
-      break;
-    else
-      code = 47 /*/*/;
-    if (code === 47 /*/*/) {
-      if (lastSlash === i - 1 || dots === 1) {
-        // NOOP
-      } else if (lastSlash !== i - 1 && dots === 2) {
-        if (res.length < 2 || lastSegmentLength !== 2 || res.charCodeAt(res.length - 1) !== 46 /*.*/ || res.charCodeAt(res.length - 2) !== 46 /*.*/) {
-          if (res.length > 2) {
-            var lastSlashIndex = res.lastIndexOf('/');
-            if (lastSlashIndex !== res.length - 1) {
-              if (lastSlashIndex === -1) {
-                res = '';
-                lastSegmentLength = 0;
-              } else {
-                res = res.slice(0, lastSlashIndex);
-                lastSegmentLength = res.length - 1 - res.lastIndexOf('/');
-              }
-              lastSlash = i;
-              dots = 0;
-              continue;
-            }
-          } else if (res.length === 2 || res.length === 1) {
-            res = '';
-            lastSegmentLength = 0;
-            lastSlash = i;
-            dots = 0;
-            continue;
-          }
-        }
-        if (allowAboveRoot) {
-          if (res.length > 0)
-            res += '/..';
-          else
-            res = '..';
-          lastSegmentLength = 2;
-        }
-      } else {
-        if (res.length > 0)
-          res += '/' + path.slice(lastSlash + 1, i);
-        else
-          res = path.slice(lastSlash + 1, i);
-        lastSegmentLength = i - lastSlash - 1;
-      }
-      lastSlash = i;
-      dots = 0;
-    } else if (code === 46 /*.*/ && dots !== -1) {
-      ++dots;
-    } else {
-      dots = -1;
-    }
-  }
-  return res;
-}
-
-function _format(sep, pathObject) {
-  var dir = pathObject.dir || pathObject.root;
-  var base = pathObject.base || (pathObject.name || '') + (pathObject.ext || '');
-  if (!dir) {
-    return base;
-  }
-  if (dir === pathObject.root) {
-    return dir + base;
-  }
-  return dir + sep + base;
-}
-
-var posix = {
-  // path.resolve([from ...], to)
-  resolve: function resolve() {
-    var resolvedPath = '';
-    var resolvedAbsolute = false;
-    var cwd;
-
-    for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-      var path;
-      if (i >= 0)
-        path = arguments[i];
-      else {
-        if (cwd === undefined)
-          cwd = process.cwd();
-        path = cwd;
-      }
-
-      assertPath(path);
-
-      // Skip empty entries
-      if (path.length === 0) {
-        continue;
-      }
-
-      resolvedPath = path + '/' + resolvedPath;
-      resolvedAbsolute = path.charCodeAt(0) === 47 /*/*/;
-    }
-
-    // At this point the path should be resolved to a full absolute path, but
-    // handle relative paths to be safe (might happen when process.cwd() fails)
-
-    // Normalize the path
-    resolvedPath = normalizeStringPosix(resolvedPath, !resolvedAbsolute);
-
-    if (resolvedAbsolute) {
-      if (resolvedPath.length > 0)
-        return '/' + resolvedPath;
-      else
-        return '/';
-    } else if (resolvedPath.length > 0) {
-      return resolvedPath;
-    } else {
-      return '.';
-    }
-  },
-
-  normalize: function normalize(path) {
-    assertPath(path);
-
-    if (path.length === 0) return '.';
-
-    var isAbsolute = path.charCodeAt(0) === 47 /*/*/;
-    var trailingSeparator = path.charCodeAt(path.length - 1) === 47 /*/*/;
-
-    // Normalize the path
-    path = normalizeStringPosix(path, !isAbsolute);
-
-    if (path.length === 0 && !isAbsolute) path = '.';
-    if (path.length > 0 && trailingSeparator) path += '/';
-
-    if (isAbsolute) return '/' + path;
-    return path;
-  },
-
-  isAbsolute: function isAbsolute(path) {
-    assertPath(path);
-    return path.length > 0 && path.charCodeAt(0) === 47 /*/*/;
-  },
-
-  join: function join() {
-    if (arguments.length === 0)
-      return '.';
-    var joined;
-    for (var i = 0; i < arguments.length; ++i) {
-      var arg = arguments[i];
-      assertPath(arg);
-      if (arg.length > 0) {
-        if (joined === undefined)
-          joined = arg;
-        else
-          joined += '/' + arg;
-      }
-    }
-    if (joined === undefined)
-      return '.';
-    return posix.normalize(joined);
-  },
-
-  relative: function relative(from, to) {
-    assertPath(from);
-    assertPath(to);
-
-    if (from === to) return '';
-
-    from = posix.resolve(from);
-    to = posix.resolve(to);
-
-    if (from === to) return '';
-
-    // Trim any leading backslashes
-    var fromStart = 1;
-    for (; fromStart < from.length; ++fromStart) {
-      if (from.charCodeAt(fromStart) !== 47 /*/*/)
-        break;
-    }
-    var fromEnd = from.length;
-    var fromLen = fromEnd - fromStart;
-
-    // Trim any leading backslashes
-    var toStart = 1;
-    for (; toStart < to.length; ++toStart) {
-      if (to.charCodeAt(toStart) !== 47 /*/*/)
-        break;
-    }
-    var toEnd = to.length;
-    var toLen = toEnd - toStart;
-
-    // Compare paths to find the longest common path from root
-    var length = fromLen < toLen ? fromLen : toLen;
-    var lastCommonSep = -1;
-    var i = 0;
-    for (; i <= length; ++i) {
-      if (i === length) {
-        if (toLen > length) {
-          if (to.charCodeAt(toStart + i) === 47 /*/*/) {
-            // We get here if `from` is the exact base path for `to`.
-            // For example: from='/foo/bar'; to='/foo/bar/baz'
-            return to.slice(toStart + i + 1);
-          } else if (i === 0) {
-            // We get here if `from` is the root
-            // For example: from='/'; to='/foo'
-            return to.slice(toStart + i);
-          }
-        } else if (fromLen > length) {
-          if (from.charCodeAt(fromStart + i) === 47 /*/*/) {
-            // We get here if `to` is the exact base path for `from`.
-            // For example: from='/foo/bar/baz'; to='/foo/bar'
-            lastCommonSep = i;
-          } else if (i === 0) {
-            // We get here if `to` is the root.
-            // For example: from='/foo'; to='/'
-            lastCommonSep = 0;
-          }
-        }
-        break;
-      }
-      var fromCode = from.charCodeAt(fromStart + i);
-      var toCode = to.charCodeAt(toStart + i);
-      if (fromCode !== toCode)
-        break;
-      else if (fromCode === 47 /*/*/)
-        lastCommonSep = i;
-    }
-
-    var out = '';
-    // Generate the relative path based on the path difference between `to`
-    // and `from`
-    for (i = fromStart + lastCommonSep + 1; i <= fromEnd; ++i) {
-      if (i === fromEnd || from.charCodeAt(i) === 47 /*/*/) {
-        if (out.length === 0)
-          out += '..';
-        else
-          out += '/..';
-      }
-    }
-
-    // Lastly, append the rest of the destination (`to`) path that comes after
-    // the common path parts
-    if (out.length > 0)
-      return out + to.slice(toStart + lastCommonSep);
-    else {
-      toStart += lastCommonSep;
-      if (to.charCodeAt(toStart) === 47 /*/*/)
-        ++toStart;
-      return to.slice(toStart);
-    }
-  },
-
-  _makeLong: function _makeLong(path) {
-    return path;
-  },
-
-  dirname: function dirname(path) {
-    assertPath(path);
-    if (path.length === 0) return '.';
-    var code = path.charCodeAt(0);
-    var hasRoot = code === 47 /*/*/;
-    var end = -1;
-    var matchedSlash = true;
-    for (var i = path.length - 1; i >= 1; --i) {
-      code = path.charCodeAt(i);
-      if (code === 47 /*/*/) {
-          if (!matchedSlash) {
-            end = i;
-            break;
-          }
-        } else {
-        // We saw the first non-path separator
-        matchedSlash = false;
-      }
-    }
-
-    if (end === -1) return hasRoot ? '/' : '.';
-    if (hasRoot && end === 1) return '//';
-    return path.slice(0, end);
-  },
-
-  basename: function basename(path, ext) {
-    if (ext !== undefined && typeof ext !== 'string') throw new TypeError('"ext" argument must be a string');
-    assertPath(path);
-
-    var start = 0;
-    var end = -1;
-    var matchedSlash = true;
-    var i;
-
-    if (ext !== undefined && ext.length > 0 && ext.length <= path.length) {
-      if (ext.length === path.length && ext === path) return '';
-      var extIdx = ext.length - 1;
-      var firstNonSlashEnd = -1;
-      for (i = path.length - 1; i >= 0; --i) {
-        var code = path.charCodeAt(i);
-        if (code === 47 /*/*/) {
-            // If we reached a path separator that was not part of a set of path
-            // separators at the end of the string, stop now
-            if (!matchedSlash) {
-              start = i + 1;
-              break;
-            }
-          } else {
-          if (firstNonSlashEnd === -1) {
-            // We saw the first non-path separator, remember this index in case
-            // we need it if the extension ends up not matching
-            matchedSlash = false;
-            firstNonSlashEnd = i + 1;
-          }
-          if (extIdx >= 0) {
-            // Try to match the explicit extension
-            if (code === ext.charCodeAt(extIdx)) {
-              if (--extIdx === -1) {
-                // We matched the extension, so mark this as the end of our path
-                // component
-                end = i;
-              }
-            } else {
-              // Extension does not match, so our result is the entire path
-              // component
-              extIdx = -1;
-              end = firstNonSlashEnd;
-            }
-          }
-        }
-      }
-
-      if (start === end) end = firstNonSlashEnd;else if (end === -1) end = path.length;
-      return path.slice(start, end);
-    } else {
-      for (i = path.length - 1; i >= 0; --i) {
-        if (path.charCodeAt(i) === 47 /*/*/) {
-            // If we reached a path separator that was not part of a set of path
-            // separators at the end of the string, stop now
-            if (!matchedSlash) {
-              start = i + 1;
-              break;
-            }
-          } else if (end === -1) {
-          // We saw the first non-path separator, mark this as the end of our
-          // path component
-          matchedSlash = false;
-          end = i + 1;
-        }
-      }
-
-      if (end === -1) return '';
-      return path.slice(start, end);
-    }
-  },
-
-  extname: function extname(path) {
-    assertPath(path);
-    var startDot = -1;
-    var startPart = 0;
-    var end = -1;
-    var matchedSlash = true;
-    // Track the state of characters (if any) we see before our first dot and
-    // after any path separator we find
-    var preDotState = 0;
-    for (var i = path.length - 1; i >= 0; --i) {
-      var code = path.charCodeAt(i);
-      if (code === 47 /*/*/) {
-          // If we reached a path separator that was not part of a set of path
-          // separators at the end of the string, stop now
-          if (!matchedSlash) {
-            startPart = i + 1;
-            break;
-          }
-          continue;
-        }
-      if (end === -1) {
-        // We saw the first non-path separator, mark this as the end of our
-        // extension
-        matchedSlash = false;
-        end = i + 1;
-      }
-      if (code === 46 /*.*/) {
-          // If this is our first dot, mark it as the start of our extension
-          if (startDot === -1)
-            startDot = i;
-          else if (preDotState !== 1)
-            preDotState = 1;
-      } else if (startDot !== -1) {
-        // We saw a non-dot and non-path separator before our dot, so we should
-        // have a good chance at having a non-empty extension
-        preDotState = -1;
-      }
-    }
-
-    if (startDot === -1 || end === -1 ||
-        // We saw a non-dot character immediately before the dot
-        preDotState === 0 ||
-        // The (right-most) trimmed path component is exactly '..'
-        preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
-      return '';
-    }
-    return path.slice(startDot, end);
-  },
-
-  format: function format(pathObject) {
-    if (pathObject === null || typeof pathObject !== 'object') {
-      throw new TypeError('The "pathObject" argument must be of type Object. Received type ' + typeof pathObject);
-    }
-    return _format('/', pathObject);
-  },
-
-  parse: function parse(path) {
-    assertPath(path);
-
-    var ret = { root: '', dir: '', base: '', ext: '', name: '' };
-    if (path.length === 0) return ret;
-    var code = path.charCodeAt(0);
-    var isAbsolute = code === 47 /*/*/;
-    var start;
-    if (isAbsolute) {
-      ret.root = '/';
-      start = 1;
-    } else {
-      start = 0;
-    }
-    var startDot = -1;
-    var startPart = 0;
-    var end = -1;
-    var matchedSlash = true;
-    var i = path.length - 1;
-
-    // Track the state of characters (if any) we see before our first dot and
-    // after any path separator we find
-    var preDotState = 0;
-
-    // Get non-dir info
-    for (; i >= start; --i) {
-      code = path.charCodeAt(i);
-      if (code === 47 /*/*/) {
-          // If we reached a path separator that was not part of a set of path
-          // separators at the end of the string, stop now
-          if (!matchedSlash) {
-            startPart = i + 1;
-            break;
-          }
-          continue;
-        }
-      if (end === -1) {
-        // We saw the first non-path separator, mark this as the end of our
-        // extension
-        matchedSlash = false;
-        end = i + 1;
-      }
-      if (code === 46 /*.*/) {
-          // If this is our first dot, mark it as the start of our extension
-          if (startDot === -1) startDot = i;else if (preDotState !== 1) preDotState = 1;
-        } else if (startDot !== -1) {
-        // We saw a non-dot and non-path separator before our dot, so we should
-        // have a good chance at having a non-empty extension
-        preDotState = -1;
-      }
-    }
-
-    if (startDot === -1 || end === -1 ||
-    // We saw a non-dot character immediately before the dot
-    preDotState === 0 ||
-    // The (right-most) trimmed path component is exactly '..'
-    preDotState === 1 && startDot === end - 1 && startDot === startPart + 1) {
-      if (end !== -1) {
-        if (startPart === 0 && isAbsolute) ret.base = ret.name = path.slice(1, end);else ret.base = ret.name = path.slice(startPart, end);
-      }
-    } else {
-      if (startPart === 0 && isAbsolute) {
-        ret.name = path.slice(1, startDot);
-        ret.base = path.slice(1, end);
-      } else {
-        ret.name = path.slice(startPart, startDot);
-        ret.base = path.slice(startPart, end);
-      }
-      ret.ext = path.slice(startDot, end);
-    }
-
-    if (startPart > 0) ret.dir = path.slice(0, startPart - 1);else if (isAbsolute) ret.dir = '/';
-
-    return ret;
-  },
-
-  sep: '/',
-  delimiter: ':',
-  win32: null,
-  posix: null
-};
-
-posix.posix = posix;
-
-module.exports = posix;
-
-}).call(this)}).call(this,require('_process'))
-},{"_process":37}],37:[function(require,module,exports){
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
-
-
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
-}
-
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
-
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
-
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
-
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
 },{}],38:[function(require,module,exports){
 const style_sheet = require('support-style-sheet')
 const message_maker = require('message-maker')
 // const big_int = require('big-int')
 const practice = require('practice')
 
+var id = 0
+
 module.exports = i_input
 
-function i_input (option, protocol) {
-    const {page = 'Demo', to = '', flow = 'i-input', name, role = 'input', type = 'text', value = '', min = 0, max = 100, maxlength = 0, step = '1', placeholder = '', float = false, checked = false, disabled = false, theme} = option
-    let is_checked = checked
-    let is_disabled = disabled
-    const send = protocol(get)
-    let make = message_maker(`${name} / ${role} / ${flow} / ${page}`)
-    let message = make({type: 'ready', data: {input: type, value}})
-    let [int, dec] = get_step_arr()
-    let cal_int = 0
-    let cal_dec = 0
-    send(message)
-    const widget = () => {
+function i_input (opts, protocol) {
+    const { role = 'input', type = 'text', value = '', min = 0, max = 100, maxlength = 50, step = '1', placeholder = '', checked = false, disabled = false, theme } = opts
+    const status = {
+        is_checked: checked,
+        is_disabled: disabled,
+    }
+    let [step_i, step_d] = get_int_and_dec(step)
+
+/* ------------------------------------------------
+                    <protocol>
+------------------------------------------------ */
+    const myaddress = `i-input-${id++}` // unique
+    const inbox = {}
+    const outbox = {}
+    const recipients = {}
+    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
+
+    const {notify, address} = protocol(myaddress, listen)
+    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
+
+    let make = message_maker(myaddress) // @TODO: replace flow with myaddress/myaddress
+    let message = make({to: address, type: 'ready', data: {input: type, value}})
+    notify(message)
+
+    function listen (msg) {
+        const { head, refs, type, data, meta } = msg // listen to msg
+        inbox[head.join('/')] = msg                  // store msg
+        const [from, to, msg_id] = head
+        // todo: what happens when we receive the message
+        const { notify, make, address } = recipients['parent']
+        if (from === recipients['parent'].address) {
+            if (type === 'disabled' || type ==='enabled') {
+                element.disabled = (type === 'disable') ? true : false
+                notify(make({ to: address, type: `confirm-${type}`, refs: { cause: msg.head  } }))
+            }
+        }
+        if (from === 'icon') {}
+        else { }
+    }
+/* ------------------------------------------------
+                    </protocol>
+------------------------------------------------ */
+
+    const make_element = () => {
         const el = document.createElement('i-input')
         const shadow = el.attachShadow({mode: 'closed'})
         const input = document.createElement('input')
-        set_attribute(el, input)
+        set_attributes(el, input)
         style_sheet(shadow, style)
         shadow.append(input)
         // handle events go here
-        input.onblur = (e) => handle_blur(e, input)
-        // Safari is not support onfocus to use select()
+        input.onwheel = (e) => e.preventDefault()
+        input.onblur = (e) => handle_blur(e, input) // when element loses focus
+        // Safari doesn't support onfocus @TODO use select()
         input.onclick = (e) => handle_click(e, input)
         input.onfocus = (e) => handle_focus(e, input)
-        input.onwheel = (e) => e.preventDefault()
-        input.onkeypress = (e) => handle_pressed(e, input)
         input.onkeydown = (e) => handle_keydown_change(e, input)
         input.onkeyup = (e) => handle_keyup_change(e, input)
         return el
     }
+// ---------------------------------------------------------------
     // all set attributes go here
-    function set_attribute (el, input) {
+    function set_attributes (el, input) {
         input.type = type
         input.name = name
-        if (value !== '') input.value = value
-        if (placeholder !== '') input.placeholder = placeholder
+        input.value = value
+        input.placeholder = placeholder
         if (type === 'number') {
             input.min = min
             input.max = max
         }
-        if (step !== '1') input.step =  `${int}.${dec}` 
         // properties
         el.setAttribute('role', role)
         el.setAttribute('type', type)
         input.setAttribute('role', role)
-        input.setAttribute('aria-label', name)
-        if (is_disabled) el.setAttribute('disabled', is_disabled)
-        if (maxlength > 0 ) input.setAttribute('maxlength', maxlength)
+        input.setAttribute('aria-myaddress', name)
+        if (status.is_disabled) el.setAttribute('disabled', status.is_disabled)
+        input.setAttribute('maxlength', maxlength)
     }
-    // to find integers and decimals in step
-    function get_step_arr () {
-        let str = `${step}`
-        let [i, d] = str.split('.')
-        // if d === undefined, make d euqal to 0
-        if (d === void 0) d = '0'
-        return [i, d]
-    }
-    // to find integers and decimals in input.value
-    function get_val_arr (string) {
+    // get integers and decimals in value
+    function get_int_and_dec (string) {
         let [i, d] = string.split('.')
-        // if (i or d) === undefined, make d euqal to 0
         if (i === '') i = '0'
         if (d === void 0) d = '0'
         return [i, d]
-    }
-    function to_increase (e, input, val) {
+    } 
+    function increase (e, input, val) {
         e.preventDefault()
-        let [step_i, step_d] = get_step_arr()
-        let [val_i, val_d] = get_val_arr(input.value)
+        let [step_i, step_d] = get_int_and_dec(step)
+        let [val_i, val_d] = get_int_and_dec(value)
         let step_len = step_d.length
         let val_len = val_d.length
         if (val_len < step_len) val_d = val_d.padEnd(step_len, '0')
@@ -2763,10 +2659,9 @@ function i_input (option, protocol) {
         console.log('step:', step_i, step_d);
         console.log('val:', val_i, val_d);
     }
-    function to_decrease (e, input, val) {
+    function decrease (e, input, val) {
         e.preventDefault()
-        let [step_i, step_d] = get_step_arr()
-        let [val_i, val_d] = get_val_arr(val)
+        let [val_i, val_d] = get_int_and_dec(val)
         let step_len = step_d.length
         let val_len = val_d.length
         if (val_len < step_len) val_d = val_d.padEnd(step_len, '0')
@@ -2778,37 +2673,30 @@ function i_input (option, protocol) {
         console.log('val:', val_i, val_d);
     }
     // input click event
-    function handle_click (e, input) {
-    }
+    function handle_click (e, input) {}
     // input focus event
-    function handle_focus (e, input) {
-
-    }
+    function handle_focus (e, input) {}
     // input blur event
     function handle_blur (e, input) {
         if (input.value === '') return
-        message = make({to, type: 'blur', data: {input: name, value: input.value}})
-        send(message)
+        message = make({to: address, type: 'blur', data: {input: name, value: input.value}})
+        notify(message)
     }
-    // input keypress event
-    function handle_pressed (e, input) {
-        const key = e.key
-        const code = e.keyCode || e.charCode
-        if (Number(val) >= Number(max)) return input.value = Number(max)
-        if (Number(val) < 1) return input.value = Number(min)
-        if (code === 13 || key === 'Enter') input.blur()
-        if (code === 8 || key === 'Backspace') input.value = ''
-        if (maxlength > 0 && input.value.length > maxlength) e.preventDefault()
-    }
-    // float number input keydown event
+
+    // input keydown event
     function handle_keydown_change (e, input) {
-        const val = input.value === '' ? 0 : input.value
+        const val = input.value
         const key = e.key
-        const code = e.keyCode || e.charCode
-        if (type === 'number') {
+        const code = e.keyCode || e.charCode   
+        if (code === 13 || key === 'Enter') input.blur()
+        // if (code === 8 || key === 'Backspace') input.value = ''    
+        if (type === 'number' || type === 'decimal number') {
+            if (Number(val) >= Number(max)) return input.value = Number(max)
+            // if (val.length > 1 && val.charAt(0) === 0) input.value = 0
+            if (maxlength > 0 && val.length > maxlength) e.preventDefault()
             if (val < min || val > max) e.preventDefault()
-            if (code === 38 || key === 'ArrowUp') to_increase(e, input, val)
-            if (code === 40 || key === 'ArrowDown' ) to_decrease(e, input, val)
+            if (code === 38 || key === 'ArrowUp') increase(e, input, val)
+            if (code === 40 || key === 'ArrowDown' ) decrease(e, input, val)
         }
     }
     // float number input keyup event
@@ -2820,7 +2708,6 @@ function i_input (option, protocol) {
             if (val < min) input.value = min
         }
     }
-    function get (msg) {}
     
    // insert CSS style
    const custom_style = theme ? theme.style : ''
@@ -2837,7 +2724,8 @@ function i_input (option, protocol) {
            shadow_color_hover, shadow_offset_xy_hover, blur_hover, shadow_opacity_hover
        } = theme.props
    }
-    
+
+// ---------------------------------------------------------------
     const style = `
     :host(i-input) {
         --size: ${size ? size : 'var(--size14)'};
@@ -2896,12 +2784,13 @@ function i_input (option, protocol) {
     }
     ${custom_style}
     `
-    return widget()
+    const element = make_element()
+// ---------------------------------------------------------------
+    return element
+// ---------------------------------------------------------------
 }
 
-},{"message-maker":39,"practice":40,"support-style-sheet":41}],39:[function(require,module,exports){
-arguments[4][25][0].apply(exports,arguments)
-},{"dup":25}],40:[function(require,module,exports){
+},{"message-maker":34,"practice":39,"support-style-sheet":40}],39:[function(require,module,exports){
 let min = '20.25'
 let max = '150.00208'
 let step1 = '0.22222222'
@@ -2970,6 +2859,6 @@ function calc (val, step) {
         return update
     }
 }
-},{}],41:[function(require,module,exports){
-arguments[4][26][0].apply(exports,arguments)
-},{"dup":26}]},{},[1]);
+},{}],40:[function(require,module,exports){
+arguments[4][28][0].apply(exports,arguments)
+},{"dup":28}]},{},[1]);
