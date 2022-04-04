@@ -1047,7 +1047,12 @@ module.exports = i_button
 function i_button (opts, parent_protocol) {
     const {name, role = 'button', controls, body = '', icons = {}, cover, classlist = null, mode = '', state, expanded = undefined, current = undefined, selected = false, checked = false, disabled = false, theme = {}} = opts
     const el = make_element({name: 'i-button', classlist, role })
-//-------------------------------------------------
+    const {icon = {}, select = { name: 'check' }, list = { name: 'arrow-down'} } = icons
+    var status = 'default_status'
+
+/* ------------------------------------------------
+                    <protocol>
+------------------------------------------------ */
     const myaddress = `${__filename}-${id++}`
     const inbox = {}
     const outbox = {}
@@ -1071,82 +1076,96 @@ function i_button (opts, parent_protocol) {
         inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
         console.log('BUTTON', { type, name: names[from].name, msg })
-        // toggle
-        if (type.match(/switched/)) return switched_event(data)
-        // dropdown
-        if (type.match(/expanded/)) return expanded_event(data)
-        if (type.match(/collapsed/)) return collapsed_event(data)
-        // tab, checkbox
-        if (type.match(/tab-selected/)) return tab_selected_event(data)
-        // option
-        if (type.match(/selected|unselected/)) return list_selected_event(data)
-        if (type.match(/changed/)) return changed_event(data)
-        if (type.match(/current/)) {
-            is_current = data
-            return set_attr({aria: 'current', prop: is_current})
+        const cases = {
+            'switch': () => handle_switched_event(data), //toggle
+            'expanded': () => handle_expanded_event(data), // dropdown
+            'collapsed': () => handle_collapsed_event(data),
+            'tab-selected': () => handle_tab_selected_event(data), //tab/checkbox
+            'selected': () => handle_list_selected_event(data), // option
+            'unselected': () => handle_list_selected_event(data), 
+            'changed': () => handle_changed_event(data), 
+            'current': () => handle_current_event(data), 
         }
+       const handler = cases[type] || default_handler
+       function default_handler () {
+           console.log()
+       }
     }
-//-------------------------------------------------
+/* ------------------------------------------------
+                    </protocol>
+------------------------------------------------ */
 
-    const {icon = {}, select = { name: 'check' }, list = { name: 'arrow-down'} } = icons
+
+function make_button () {
+    const { make } = recipients['parent']
+    // init_status(role)
+    notify(make({ to: address, type: 'ready', data: { status } }))
+    
     if (icon?.name) var main_icon = i_icon({ name: icon.name, path: icon.path}, make_protocol(`${icon.name}-${icon_count++}`))
-    let is_current = current
-    let is_checked = checked
-    let is_disabled = disabled
-    let is_selected = selected
-    let is_expanded = 'expanded' in opts ? expanded : void 0
+    console.log({status, role})
+    const shadow = el.attachShadow({mode: 'closed'})
+    const text = make_element({name: 'span', classlist: 'text'})
+    const avatar = make_element({name: 'span', classlist: 'avatar'})
+    const listbox = make_element({name: 'span', classlist: 'listbox'})
+    const option = make_element({name: 'span', classlist: 'option'})
+    // check icon, img and body if has value
+    const add_cover = typeof cover === 'string' ? avatar : undefined
+    const add_text = body ? typeof body === 'object' ? 'undefined' : text : undefined
+    avatar.append(make_img({src: cover, alt: name}))
+    if (!status === 'disabled') el.onclick = handle_click
+    el.setAttribute('aria-label', name)
+    text.append(body)
+    style_sheet(shadow, style)
+    const items = [main_icon, add_cover, add_text]
+    append_items(items, shadow, option, listbox)
+    init_attr(el)
+    return el
+    }
 
-    function widget () {
-        const { make } = recipients['parent']
-        const data = role === 'tab' ?  {selected: is_current ? 'true' : is_selected, current: is_current} : role === 'switch' ? {checked: is_checked} : role === 'listbox' ? {expanded: is_expanded} : disabled ? {disabled} : role === 'option' ? {selected: is_selected, current: is_current} : null
-        notify(make({ to: address, type: 'ready', data }))
-        const shadow = el.attachShadow({mode: 'closed'})
-        const text = make_element({name: 'span', classlist: 'text'})
-        const avatar = make_element({name: 'span', classlist: 'avatar'})
-        const listbox = make_element({name: 'span', classlist: 'listbox'})
-        const option = make_element({name: 'span', classlist: 'option'})
-        // check icon, img and body if has value
-        const add_cover = typeof cover === 'string' ? avatar : undefined
-        const add_text = body ? typeof body === 'object' ? 'undefined' : text : undefined
-        if (typeof cover === 'string') avatar.append(make_img({src: cover, alt: name}))
-        if (typeof cover === 'object') notify(make({ to: address, type: 'error', data: `cover[${typeof cover}] must to be a string` }))
-        if (typeof body === 'object') notify(make({ to: address, type: 'error', data: { body: `content is an ${typeof body}`, content: body } }))
-        if (!is_disabled) el.onclick = handle_click
-        el.setAttribute('aria-label', name)
-        text.append(body)
-        style_sheet(shadow, style)
-        const items = [main_icon, add_cover, add_text]
-        append_items(items, shadow, option, listbox)
-        init_attr(el)
-        return el
+    /////////
+
+    // const set_status = new_status => {
+    //     const state_machine = {
+    //         'current_selected': ['current_selected', 'current_unselected', 'notcurrent_selected', 'notcurrent_unselected'],
+    //         'current_unselected': ['current_selected', 'current_unselected', 'notcurrent_selected', 'notcurrent_unselected'], // QUESTION: can current_unselected become notcurrent_unselected in one event?
+    //         'expanded': ['expanded', 'collapsed'],
+    //         'collapsed': ['expanded', 'collapsed'],
+    //         'checked': ['checked', 'unchecked'],
+    //         'unchecked': ['checked', 'unchecked'],
+    //     }
+    //     if (!state_machine[status].includes(new_status)) throw new Error('invalid state transition')
+    //     status = new_status
+    // }
+
+    // function init_status (role) {
+    //     if (disabled) status = 'disabled'
+    //     else if (role ==='button' || role === 'tab' || role === 'option' || role === 'menuitem') {  
+    //         if (selected && current) status = 'current_selected'
+    //         else if (!selected && current) status = 'current_unselected'
+    //         else if (selected && !current) status = 'notcurrent_selected'
+    //         else if (!selected && !current) status = 'notcurrent_unselected'
+    //     }
+    //     else if (role === 'switch') checked ? status = 'checked' : status = 'unchecked'
+    //     else if (role === 'listbox') expanded ? status = 'expanded' : status = 'collapsed'
+    // }
+
+    function handle_current_event (current) {
+        return set_attr({aria: 'current', prop: current})
     }
 
     function init_attr (el) {
         // define conditions
         if (state) set_attr({aria: 'aria-live', prop: 'assertive'})
-        if (role === 'tab') {
-            set_attr({aria: 'selected', prop: is_selected})
-            set_attr({aria: 'controls', prop: controls})
-            el.setAttribute('tabindex', is_current ? 0 : -1)
-        }
-        if (role === 'switch') {
-            set_attr({aria: 'checked', prop: is_checked})
-        }
+        if (selected) set_attr({aria: 'selected', prop: selected})
+        if (checked) set_attr({aria: 'checked', prop: checked})
+        if (disabled)  set_attr({aria: 'disabled', prop: disabled})
+        if (expanded ) set_attr({aria: 'expanded', prop: expanded})
+        if (current) set_attr({aria: 'current', prop: current})
         if (role === 'listbox') set_attr({aria: 'haspopup', prop: role})
-        if (disabled) {
-            set_attr({aria: 'disabled', prop: is_disabled})
-            el.setAttribute('disabled', is_disabled)
-        } 
-        if (is_checked) set_attr({aria: 'checked', prop: is_checked})
-        if (role.match(/option/)) {
-            is_selected = is_current ? is_current : is_selected
-            set_attr({aria: 'selected', prop: is_selected})
+        else if (role === 'tab') {
+            set_attr({aria: 'controls', prop: controls})
+            el.setAttribute('tabindex', current ? 0 : -1)
         }
-        if (expanded !== undefined) {
-            set_attr({aria: 'expanded', prop: is_expanded})
-        }
-        // make current status
-        if (current !== undefined) set_attr({aria: 'current', prop: is_current})
     }
 
     // make element to append into shadowDOM
@@ -1163,43 +1182,41 @@ function i_button (opts, parent_protocol) {
         })
     }
 
-    function set_attr ({aria, prop}) {
-        el.setAttribute(`aria-${aria}`, prop)
-    }
+    function set_attr ({aria, prop}) { el.setAttribute(`aria-${aria}`, prop) }
 
     // toggle
-    function switched_event (data) {
+    function handle_switched_event (data) {
         const {checked} = data
-        is_checked = checked
-        if (is_checked) return set_attr({aria: 'checked', prop: is_checked})
+        STATE.checked = checked
+        if (STATE.checked) return set_attr({aria: 'checked', prop: STATE.checked})
         else el.removeAttribute('aria-checked')
     }
-    function expanded_event (data) {
-        is_expanded = data
-        set_attr({aria: 'expanded', prop: is_expanded})
+    function handle_expanded_event (data) {
+        STATE.expanded = data
+        set_attr({aria: 'expanded', prop: STATE.expanded})
     }
-    function collapsed_event (data) {
-        is_expanded = data
-        set_attr({aria: 'expanded', prop: is_expanded})
+    function handle_collapsed_event (data) {
+        STATE.expanded = data
+        set_attr({aria: 'expanded', prop: STATE.expanded})
     }
     // tab selected
-    function tab_selected_event ({selected}) {
-        is_selected = selected
-        set_attr({aria: 'selected', prop: is_selected})
-        el.setAttribute('tabindex', is_current ? 0 : -1)
+    function handle_tab_selected_event ({selected}) {
+        STATE.selected = selected
+        set_attr({aria: 'selected', prop: STATE.selected})
+        el.setAttribute('tabindex', STATE.current ? 0 : -1)
     }
-    function list_selected_event (data) {
-        is_selected = data.selected
-        set_attr({aria: 'selected', prop: is_selected})
+    function handle_list_selected_event (data) {
+        STATE.selected = data
+        set_attr({aria: 'selected', prop: STATE.selected})
         if (mode === 'listbox-single') {
-            is_current = is_selected
-            set_attr({aria: 'current', prop: is_current})
+            STATE.current = STATE.selected
+            set_attr({aria: 'current', prop: STATE.current})
         }
         // option is selected then send selected items to listbox button
         const { make } = recipients['parent']
-        if (is_selected) notify(make({ to: address, type: 'changed', data: {text: body, cover, icon } }))
+        if (STATE.selected) notify(make({ to: address, type: 'changed', data: {text: body, cover, icon } }))
     }
-    function changed_event (data) {
+    function handle_changed_event (data) {
         const {text, cover, icon, title} = data
         // new element
         const new_text = make_element({name: 'span', classlist: 'text'})
@@ -1258,35 +1275,36 @@ function i_button (opts, parent_protocol) {
         const { make } = recipients['parent']
         const type = 'click'
         const prev_state = {
-            expanded: is_expanded,
-            selected: is_selected
+            expanded: STATE.expanded,
+            selected: STATE.selected
         }
-        if ('current' in opts) {
-            notify(make({ to: address, type: 'current', data: {name, current: is_current } }) )
+        // debugger
+        if (STATE.current) {
+            notify(make({ to: address, type: 'current', data: {name, current: STATE.current } }) )
         }
         if (expanded !== undefined) {
-            is_expanded = !prev_state.expanded
-            const type = is_expanded ? 'expanded' : 'collapsed'
-            notify(make({ to: address, type, data: {name, expanded: is_expanded } }))
+            STATE.expanded = !prev_state.expanded
+            const type = STATE.expanded ? 'expanded' : 'collapsed'
+            notify(make({ to: address, type, data: {name, expanded: STATE.expanded } }))
         }
         if (role === 'button') {
-            return notify( make({type, to: controls} ))
+            return notify( make({ to: address, type } ))
         }
         if (role === 'tab') {
-            if (is_current) return
-            is_selected = prev_state.selected
-            return notify(make({ to: address, type, data: {name, selected: is_selected } }) )
+            if (STATE.current) return
+            STATE.selected = !prev_state.selected
+            return notify(make({ to: address, type, data: {name, selected: STATE.selected } }) )
         }
         if (role === 'switch') {
-            return notify(make({ to: address, type, data: {name, checked: is_checked } }) )
+            return notify(make({ to: address, type, data: {name, checked: STATE.checked } }) )
         }
         if (role === 'listbox') {
-            is_expanded = !prev_state.expanded
-            return notify(make({ to: address, type, data: {name, expanded: is_expanded } }))
+            STATE.expanded = !prev_state.expanded
+            return notify(make({ to: address, type, data: {name, expanded: STATE.expanded } }))
         }
         if (role === 'option' || role === 'menuitem') {
-            is_selected = prev_state.selected
-            return notify(make({ to: address, type, data: {name, selected: is_selected, content: is_selected ? {text: body, cover, icon} : '' } }) )
+            STATE.selected = !prev_state.selected
+            return notify(make({ to: address, type, data: {name, selected: STATE.selected, content: STATE.selected ? {text: body, cover, icon} : '' } }) )
         }
     }
    
@@ -1654,7 +1672,11 @@ function i_button (opts, parent_protocol) {
         --weight: ${weight_hover ? weight_hover : 'var(--menu-weight-hover)'};
         --color: ${color_hover ? color_hover : 'var(--menu-color-hover)'};
     }
-    :host(i-button[role="menuitem"]:focus) {
+    // :host(i-button[role="menuitem"][aria-selected="true"]:focus) {
+    //     --color: var(--color-focus);
+    //     --bg-color: var(--bg-color-focus);
+    // }
+    :host(i-button[role="menuitem"][aria-selected="true"]) {
         --color: var(--color-focus);
         --bg-color: var(--bg-color-focus);
     }
@@ -1739,7 +1761,7 @@ function i_button (opts, parent_protocol) {
     ${custom_style}
     `
 
-    return widget()
+    return make_button()
 }
 }).call(this)}).call(this,"/node_modules/datdot-ui-button/src/index.js")
 },{"datdot-ui-icon":29,"make-element":25,"make-grid":26,"make-image":27,"message-maker":34,"support-style-sheet":28}],25:[function(require,module,exports){

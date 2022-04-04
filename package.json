@@ -1,6 +1,6 @@
 {
   "name": "datdot-ui-input",
-  "version": "0.0.0",
+  "version": "0.0.1-alpha",
   "description": "Input widget for datdot-ui",
   "main": "src/index.js",
   "scripts": {
@@ -33,6 +33,7 @@
     "csjs-inject": "^1.0.1",
     "datdot-ui-button": "git+https://github.com/datdot-ui/button.git",
     "datdot-ui-icon": "git+https://github.com/datdot-ui/icon.git",
-    "datdot-ui-logs": "git+https://github.com/datdot-ui/logs.git"
+    "datdot-ui-logs": "git+https://github.com/datdot-ui/logs.git",
+    "message-maker": "github:datdotorg/message-maker"
   }
 }
