@@ -6,21 +6,45 @@ const logs = require('datdot-ui-logs')
 const i_input = require('..')
 const button = require('datdot-ui-button')
 const icon = require('datdot-ui-icon')
-const message_maker = require('../src/node_modules/message-maker')
+const message_maker = require('message-maker')
 
 var id = 0
 
 function demo () {
-    // ---------------------------------------------------------------
+/* ------------------------------------------------
+                    <protocol>
+------------------------------------------------ */
     const myaddress = `demo-${id++}`
     const inbox = {}
     const outbox = {}
     let recipients = {}
     const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
-// ---------------------------------------------------------------
+
+    function make_protocol (name) {
+        return function protocol (address, notify) {
+            recipients[name] = { address, notify, make: message_maker(myaddress) }
+            return { notify: listen, address: myaddress }
+        }
+    }
+    function listen (msg) {
+        const { head, refs, type, data, meta } = msg // receive msg
+        const [from, to, msg_id] = head
+        inbox[head.join('/')] = msg                  // store msg
+        const { notify: logs_notify, address: logs_address, make: logs_make } = recipients['logs']
+        logs_notify(logs_make({ to: logs_address, type, data }))
+        if (from === recipients['checkbox-terms']?.address) {
+            const { notify, make, address } = recipients['checkbox-terms']
+            notify(make({ to: address, type: 'test', data: 123, refs: {} }))
+        }
+        if (from === recipients['checkbox-newsletter']?.address) { }
+        else { }
+    }
+/* ------------------------------------------------
+                    </protocol>
+------------------------------------------------ */
+
     const log_list = logs(make_protocol('logs'))
     console.log({log_list})
-// ---------------------------------------------------------------
     const text = i_input({
         name: 'text', 
         role: 'input', 
@@ -100,27 +124,6 @@ function demo () {
     const container = bel`<div class="${css.container}">${content}</div>`
     const app = bel`<div class="${css.wrap}" data-state="debug"> ${container}${log_list} </div>`
     return app
-// ---------------------------------------------------------------
-    function make_protocol (name) {
-        return function protocol (address, notify) {
-            recipients[name] = { address, notify, make: message_maker(myaddress) }
-            return { notify: listen, address: myaddress }
-        }
-    }
-    function listen (msg) {
-        const { head, refs, type, data, meta } = msg // receive msg
-        inbox[head.join('/')] = msg                  // store msg
-        recipients['logs'].notify(msg)
-        const [from] = head
-        if (from === recipients['checkbox-terms']?.address) {
-            const { notify, make, address } = recipients['checkbox-terms']
-            const msg = make({ to: address, type: 'test', data: 123, refs: {} })
-            notify(msg)
-        }
-        if (from === recipients['checkbox-newsletter']?.address) { }
-        else { }
-    }
-// ---------------------------------------------------------------
 }
 
 // ---------------------------------------------------------------

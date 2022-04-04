@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/datdotorg/datdot-ui-input.git"
+    "url": "git+https://github.com/datdot-ui/input.git"
   },
   "keywords": [
     "datdot",
@@ -21,9 +21,9 @@
   "author": "datdotorg",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/datdotorg/datdot-ui-input/issues"
+    "url": "https://github.com/datdot-ui/input/issues"
   },
-  "homepage": "https://github.com/datdotorg/datdot-ui-input#readme",
+  "homepage": "https://github.com/datdot-ui/input#readme",
   "devDependencies": {
     "browserify": "^17.0.0",
     "budo": "^11.6.4",

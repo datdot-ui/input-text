@@ -8,32 +8,22 @@ var id = 0
 module.exports = i_input
 
 function i_input (opts, protocol) {
-    const {
-        role = 'input', 
-        type = 'text', 
-        value = '', 
-        min = 0, 
-        max = 100, 
-        maxlength = 50, 
-        step = '1', 
-        placeholder = '', 
-        checked = false, 
-        disabled = false,
-        theme 
-    } = opts
-    // ---------------------------------------------------------------
-    const myaddress = `i-input-${id++}` // unique
-    const inbox = {}
-    const outbox = {}
-    const recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
-// ---------------------------------------------------------------
+    const { role = 'input', type = 'text', value = '', min = 0, max = 100, maxlength = 50, step = '1', placeholder = '', checked = false, disabled = false, theme } = opts
     const status = {
         is_checked: checked,
         is_disabled: disabled,
     }
     let [step_i, step_d] = get_int_and_dec(step)
-// ---------------------------------------------------------------
+
+/* ------------------------------------------------
+                    <protocol>
+------------------------------------------------ */
+    const myaddress = `i-input-${id++}` // unique
+    const inbox = {}
+    const outbox = {}
+    const recipients = {}
+    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
+
     const {notify, address} = protocol(myaddress, listen)
     recipients['parent'] = { notify, address, make: message_maker(myaddress) }
 
@@ -46,29 +36,21 @@ function i_input (opts, protocol) {
         inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
         // todo: what happens when we receive the message
+        const { notify, make, address } = recipients['parent']
         if (from === recipients['parent'].address) {
-            if (type === 'disable') {
-                element.disabled = true
-                const { notify, make, address } = recipients['parent']
-                const msg = make({ to: address, type: 'confirm-disable', refs: { cause: msg.head  }  })
-                notify(msg)
-            } else if (type === 'enable') {
-                element.disabled = false
-                const { notify, make, address } = recipients['parent']
-                const msg = make({ to: address, type: 'confirm-enable', refs: { cause: msg.head  } })
-                notify(msg)
+            if (type === 'disabled' || type ==='enabled') {
+                element.disabled = (type === 'disable') ? true : false
+                notify(make({ to: address, type: `confirm-${type}`, refs: { cause: msg.head  } }))
             }
         }
-        if (from === 'icon') {
-
-        }
-        else {
-
-        }
+        if (from === 'icon') {}
+        else { }
     }
-// ---------------------------------------------------------------
+/* ------------------------------------------------
+                    </protocol>
+------------------------------------------------ */
 
-    const widget = () => {
+    const make_element = () => {
         const el = document.createElement('i-input')
         const shadow = el.attachShadow({mode: 'closed'})
         const input = document.createElement('input')
@@ -160,17 +142,13 @@ function i_input (opts, protocol) {
     function handle_keydown_change (e, input) {
         const val = input.value
         const key = e.key
-        const code = e.keyCode || e.charCode
-        
+        const code = e.keyCode || e.charCode   
         if (code === 13 || key === 'Enter') input.blur()
-
-        // if (code === 8 || key === 'Backspace') input.value = ''
-        
+        // if (code === 8 || key === 'Backspace') input.value = ''    
         if (type === 'number' || type === 'decimal number') {
             if (Number(val) >= Number(max)) return input.value = Number(max)
             // if (val.length > 1 && val.charAt(0) === 0) input.value = 0
             if (maxlength > 0 && val.length > maxlength) e.preventDefault()
-
             if (val < min || val > max) e.preventDefault()
             if (code === 38 || key === 'ArrowUp') increase(e, input, val)
             if (code === 40 || key === 'ArrowDown' ) decrease(e, input, val)
@@ -261,7 +239,7 @@ function i_input (opts, protocol) {
     }
     ${custom_style}
     `
-    const element = widget()
+    const element = make_element()
 // ---------------------------------------------------------------
     return element
 // ---------------------------------------------------------------
