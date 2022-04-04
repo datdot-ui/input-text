@@ -290,7 +290,7 @@ body {
 document.body.append(demo())
 // ---------------------------------------------------------------
 
-},{"..":38,"bel":4,"csjs-inject":7,"datdot-ui-button":24,"datdot-ui-icon":29,"datdot-ui-logs":32,"head":2,"message-maker":34}],2:[function(require,module,exports){
+},{"..":41,"bel":4,"csjs-inject":7,"datdot-ui-button":24,"datdot-ui-icon":32,"datdot-ui-logs":35,"head":2,"message-maker":37}],2:[function(require,module,exports){
 module.exports = head
 
 function head (lang = 'utf8', title = 'Input - DatDot UI') {
@@ -534,7 +534,7 @@ module.exports = hyperx(belCreateElement, {comments: true})
 module.exports.default = module.exports
 module.exports.createElement = belCreateElement
 
-},{"./appendChild":3,"hyperx":36}],5:[function(require,module,exports){
+},{"./appendChild":3,"hyperx":39}],5:[function(require,module,exports){
 (function (global){(function (){
 'use strict';
 
@@ -553,7 +553,7 @@ function csjsInserter() {
 module.exports = csjsInserter;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"csjs":10,"insert-css":37}],6:[function(require,module,exports){
+},{"csjs":10,"insert-css":40}],6:[function(require,module,exports){
 'use strict';
 
 module.exports = require('csjs/get-css');
@@ -1082,6 +1082,7 @@ function i_button (opts, parent_protocol) {
         if (type.match(/selected|unselected/)) return list_selected_event(data)
         if (type.match(/changed/)) return changed_event(data)
         if (type.match(/current/)) {
+            // debugger
             is_current = data
             return set_attr({aria: 'current', prop: is_current})
         }
@@ -1189,7 +1190,7 @@ function i_button (opts, parent_protocol) {
         el.setAttribute('tabindex', is_current ? 0 : -1)
     }
     function list_selected_event (data) {
-        is_selected = data.selected
+        is_selected = data
         set_attr({aria: 'selected', prop: is_selected})
         if (mode === 'listbox-single') {
             is_current = is_selected
@@ -1261,7 +1262,8 @@ function i_button (opts, parent_protocol) {
             expanded: is_expanded,
             selected: is_selected
         }
-        if ('current' in opts) {
+        // debugger
+        if (is_current) {
             notify(make({ to: address, type: 'current', data: {name, current: is_current } }) )
         }
         if (expanded !== undefined) {
@@ -1270,11 +1272,11 @@ function i_button (opts, parent_protocol) {
             notify(make({ to: address, type, data: {name, expanded: is_expanded } }))
         }
         if (role === 'button') {
-            return notify( make({type, to: controls} ))
+            return notify( make({ to: address, type } ))
         }
         if (role === 'tab') {
             if (is_current) return
-            is_selected = prev_state.selected
+            is_selected = !prev_state.selected
             return notify(make({ to: address, type, data: {name, selected: is_selected } }) )
         }
         if (role === 'switch') {
@@ -1285,7 +1287,7 @@ function i_button (opts, parent_protocol) {
             return notify(make({ to: address, type, data: {name, expanded: is_expanded } }))
         }
         if (role === 'option' || role === 'menuitem') {
-            is_selected = prev_state.selected
+            is_selected = !prev_state.selected
             return notify(make({ to: address, type, data: {name, selected: is_selected, content: is_selected ? {text: body, cover, icon} : '' } }) )
         }
     }
@@ -1654,7 +1656,11 @@ function i_button (opts, parent_protocol) {
         --weight: ${weight_hover ? weight_hover : 'var(--menu-weight-hover)'};
         --color: ${color_hover ? color_hover : 'var(--menu-color-hover)'};
     }
-    :host(i-button[role="menuitem"]:focus) {
+    // :host(i-button[role="menuitem"][aria-selected="true"]:focus) {
+    //     --color: var(--color-focus);
+    //     --bg-color: var(--bg-color-focus);
+    // }
+    :host(i-button[role="menuitem"][aria-selected="true"]) {
         --color: var(--color-focus);
         --bg-color: var(--bg-color-focus);
     }
@@ -1742,7 +1748,7 @@ function i_button (opts, parent_protocol) {
     return widget()
 }
 }).call(this)}).call(this,"/node_modules/datdot-ui-button/src/index.js")
-},{"datdot-ui-icon":29,"make-element":25,"make-grid":26,"make-image":27,"message-maker":34,"support-style-sheet":28}],25:[function(require,module,exports){
+},{"datdot-ui-icon":29,"make-element":25,"make-grid":26,"make-image":27,"message-maker":37,"support-style-sheet":28}],25:[function(require,module,exports){
 module.exports = make_element
 
 function make_element({name = '', classlist = null, role }) {
@@ -1952,8 +1958,8 @@ module.exports = ({name, path, is_shadow = false, theme}, parent_protocol) => {
     return symbol
 }
 
-}).call(this)}).call(this,"/node_modules/datdot-ui-icon/src/index.js")
-},{"message-maker":34,"support-style-sheet":30,"svg":31}],30:[function(require,module,exports){
+}).call(this)}).call(this,"/node_modules/.pnpm/github.com+datdot-ui+button@708e0af87c13f35be3d7845642f6056f643b495d/node_modules/datdot-ui-icon/src/index.js")
+},{"message-maker":37,"support-style-sheet":30,"svg":31}],30:[function(require,module,exports){
 arguments[4][28][0].apply(exports,arguments)
 },{"dup":28}],31:[function(require,module,exports){
 module.exports = svg
@@ -1970,6 +1976,98 @@ function svg (path) {
     return span
 }   
 },{}],32:[function(require,module,exports){
+(function (__filename){(function (){
+const style_sheet = require('support-style-sheet')
+const svg = require('svg')
+const message_maker = require('message-maker')
+
+var id = 0
+
+module.exports = ({name, path, is_shadow = false, theme}, parent_protocol) => {
+// ---------------------------------------------------------------
+    const myaddress = `${__filename}-${id++}`
+    const inbox = {}
+    const outbox = {}
+    const recipients = {}
+    const names = {}
+    const message_id = to => (outbox[to] = 1 + (outbox[to]||0))
+
+    const {notify, address} = parent_protocol(myaddress, listen)
+    names[address] = recipients['parent'] = { name: 'parent', notify, address, make: message_maker(myaddress) }
+    notify(recipients['parent'].make({ to: address, type: 'ready', refs: ['old_logs', 'new_logs'] }))
+
+    function listen (msg) {
+        const {head, refs, type, data, meta } = msg
+        inbox[head.join('/')] = msg                  // store msg
+        const [from, to, msg_id] = head    
+        console.log('New message', { msg })
+    }
+ // ---------------------------------------------------------------   
+    const url = path ? path : './src/svg'
+    const symbol = svg(`${url}/${name}.svg`)
+    if (is_shadow) {
+        function layout (style) {
+            const icon = document.createElement('i-icon')
+            const shadow = icon.attachShadow({mode: 'closed'})
+            const slot = document.createElement('slot')
+            slot.name = 'icon'
+            style_sheet(shadow, style)
+            slot.append(symbol)
+            shadow.append(slot)
+            shadow.addEventListener('click', handleOnClick)
+            return icon
+        }
+
+        function handleOnClick (e) {
+            console.log('Click', e)
+            const { notify, address, make } = recipients['parent']
+            notify(make({ to: address, type: 'click', data: { event: e }, refs: {} }))
+        }
+
+        // insert CSS style
+        const custom_style = theme ? theme.style : ''
+        // set CSS variables
+        if (theme && theme.props) {
+            var { fill, size } = theme.props
+        }
+        const style = `
+        :host(i-icon) {
+            --size: ${size ? size : '24px'};
+            --fill: ${fill ? fill : 'var(--primary-color)'};
+            display: block;
+        }
+        slot[name='icon'] {
+            display: grid;
+            justify-content: center;
+            align-items: center;
+        }
+        slot[name='icon'] span {
+            display: block;
+            width: var(--size);
+            height: var(--size);
+        }
+        slot[name='icon'] svg {
+            width: 100%;
+            height: auto;
+        }
+        slot[name='icon'] g {
+            fill: hsl(var(--fill));
+            transition: fill .3s ease-in-out;
+        }
+        ${custom_style}
+        `
+        return layout(style)
+    }
+
+    return symbol
+}
+
+}).call(this)}).call(this,"/node_modules/datdot-ui-icon/src/index.js")
+},{"message-maker":37,"support-style-sheet":33,"svg":34}],33:[function(require,module,exports){
+arguments[4][28][0].apply(exports,arguments)
+},{"dup":28}],34:[function(require,module,exports){
+arguments[4][31][0].apply(exports,arguments)
+},{"dup":31}],35:[function(require,module,exports){
 (function (__filename){(function (){
 const bel = require('bel')
 const style_sheet = require('support-style-sheet')
@@ -2190,9 +2288,9 @@ log-list .list:last-child .function {
 }
 `
 }).call(this)}).call(this,"/node_modules/datdot-ui-logs/src/index.js")
-},{"bel":4,"message-maker":34,"support-style-sheet":33}],33:[function(require,module,exports){
+},{"bel":4,"message-maker":37,"support-style-sheet":36}],36:[function(require,module,exports){
 arguments[4][28][0].apply(exports,arguments)
-},{"dup":28}],34:[function(require,module,exports){
+},{"dup":28}],37:[function(require,module,exports){
 module.exports = function message_maker (from) {
   let msg_id = 0
   return function make ({to, type, data = null, refs = {} }) {
@@ -2200,7 +2298,7 @@ module.exports = function message_maker (from) {
       return { head: [from, to, msg_id++], refs, type, data, meta: { stack }}
   }
 }
-},{}],35:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 module.exports = attributeToProperty
 
 var transform = {
@@ -2221,7 +2319,7 @@ function attributeToProperty (h) {
   }
 }
 
-},{}],36:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var attrToProp = require('hyperscript-attribute-to-property')
 
 var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
@@ -2518,7 +2616,7 @@ var closeRE = RegExp('^(' + [
 ].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
 function selfClosing (tag) { return closeRE.test(tag) }
 
-},{"hyperscript-attribute-to-property":35}],37:[function(require,module,exports){
+},{"hyperscript-attribute-to-property":38}],40:[function(require,module,exports){
 var inserted = {};
 
 module.exports = function (css, options) {
@@ -2542,7 +2640,7 @@ module.exports = function (css, options) {
     }
 };
 
-},{}],38:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 const style_sheet = require('support-style-sheet')
 const message_maker = require('message-maker')
 // const big_int = require('big-int')
@@ -2790,7 +2888,7 @@ function i_input (opts, protocol) {
 // ---------------------------------------------------------------
 }
 
-},{"message-maker":34,"practice":39,"support-style-sheet":40}],39:[function(require,module,exports){
+},{"message-maker":37,"practice":42,"support-style-sheet":43}],42:[function(require,module,exports){
 let min = '20.25'
 let max = '150.00208'
 let step1 = '0.22222222'
@@ -2859,6 +2957,6 @@ function calc (val, step) {
         return update
     }
 }
-},{}],40:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 arguments[4][28][0].apply(exports,arguments)
 },{"dup":28}]},{},[1]);
