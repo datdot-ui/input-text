@@ -1,6 +1,6 @@
 {
   "name": "datdot-ui-input",
-  "version": "0.0.0",
+  "version": "0.0.0-alpha",
   "description": "Input widget for datdot-ui",
   "main": "src/index.js",
   "scripts": {
@@ -26,13 +26,13 @@
   "homepage": "https://github.com/fionataeyang/datdot-ui-input#readme",
   "devDependencies": {
     "browserify": "^17.0.0",
-    "budo": "^11.6.4"
+    "budo": "^11.6.4",
+    "datdot-ui-logs": "github:datdot-ui/logs#v0.0.0-alpha"
   },
   "dependencies": {
-    "bal": "^1.0.2",
+    "bel": "^6.0.0",
     "csjs-inject": "^1.0.1",
-    "datdot-ui-button": "git+https://github.com/fionataeyang/datdot-ui-button.git",
-    "datdot-ui-icon": "git+https://github.com/fionataeyang/datdot-ui-icon.git",
-    "datdot-ui-logs": "git+https://github.com/fionataeyang/datdot-ui-logs.git"
+    "datdot-ui-button": "github:datdot-ui/button#v0.0.0-alpha",
+    "datdot-ui-icon": "github:datdot-ui/icon#v0.0.0-alpha"
   }
 }
