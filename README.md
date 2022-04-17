@@ -1,4 +1,4 @@
-# datdot-ui-input
+# datdot-ui-input-text
 DatDot UI component
 
 Opts
