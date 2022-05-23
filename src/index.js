@@ -1,31 +1,19 @@
 const style_sheet = require('support-style-sheet')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 
 module.exports = i_input
 
-function i_input (opts, protocol) {
+function i_input (opts, parent_wire) {
     const { value = '', maxlength = 50, placeholder = '', theme } = opts
     const status = { }
 
 // --------------------start protocol---------------------
-    const myaddress = `input-text-${id++}` // unique
-    const inbox = {}
-    const outbox = {}
-    const recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
-
-    const {notify, address} = protocol(myaddress, listen)
-    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
-
-    const { make } = recipients['parent'] 
-    let message = make({to: address, type: 'ready', ref: { cause: {} }})
-    notify(message)
-
+    const initial_contacts = { 'parent': parent_wire }
+    const contacts = protocol_maker('input-number', listen, initial_contacts)
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // listen to msg
-        inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
     }
 // --------------------end protocol---------------------
@@ -43,11 +31,12 @@ function i_input (opts, protocol) {
         // Safari doesn't support onfocus @TODO use select()
         input.onclick = (e) => handle_click(e, input)
         input.onfocus = (e) => handle_focus(e, input)
+        input.onkeydown = (e) => handle_keydown_change(e, input)
         return el
     }
     function set_attributes (el, input) {
         input.type = 'text'
-        input.name = myaddress
+        input.name = 'input-text'
         input.value = value
         input.placeholder = placeholder
 
@@ -58,14 +47,22 @@ function i_input (opts, protocol) {
     }
 
     // input click event
-    function handle_click (e, input) {}
+    function handle_click (e, input) {
+        e.target.select()
+    }
     // input focus event
     function handle_focus (e, input) {}
     // input blur event
     function handle_blur (e, input) {
         if (input.value === '') return
-        message = make({to: address, type: 'input', data: { value: input.value }})
-        notify(message)
+        const $parent = contacts.by_name['parent']
+        $parent.notify($parent.make({to: $parent.address, type: 'input', data: { value: input.value }}))
+    }
+    function handle_keydown_change (e, input) {
+        const val = input.value === '' ? 0 : input.value
+        const key = e.key
+        const code = e.keyCode || e.charCode   
+        if (code === 13 || key === 'Enter') input.blur()
     }
 
    // insert CSS style

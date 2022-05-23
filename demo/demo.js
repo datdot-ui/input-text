@@ -3,7 +3,7 @@ const bel = require('bel')
 const csjs = require('csjs-inject')
 // datdot-ui dependences
 const input_text = require('..')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 var count = 0
@@ -12,22 +12,10 @@ function demo () {
 /* ------------------------------------------------
                     <protocol>
 ------------------------------------------------ */
-    const myaddress = `demo-${id++}`
-    const inbox = {}
-    const outbox = {}
-    let recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
-
-    function make_protocol (name) {
-        return function protocol (address, notify) {
-            recipients[name] = { address, notify, make: message_maker(myaddress) }
-            return { notify: listen, address: myaddress }
-        }
-    }
+    const contacts = protocol_maker('demo', listen)
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
-        inbox[head.join('/')] = msg                  // store msg
         if (type === 'input') console.log({ input: msg.data.value })
     }
 /* ------------------------------------------------
@@ -47,7 +35,7 @@ function demo () {
             // shadow_offset_xy: '4px 4px',
             }
         } 
-    }, make_protocol('text'))
+    }, contacts.add('text'))
 
     // content
     const content = bel`

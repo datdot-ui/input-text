@@ -4,7 +4,7 @@ const bel = require('bel')
 const csjs = require('csjs-inject')
 // datdot-ui dependences
 const input_text = require('..')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 var count = 0
@@ -13,22 +13,10 @@ function demo () {
 /* ------------------------------------------------
                     <protocol>
 ------------------------------------------------ */
-    const myaddress = `demo-${id++}`
-    const inbox = {}
-    const outbox = {}
-    let recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
-
-    function make_protocol (name) {
-        return function protocol (address, notify) {
-            recipients[name] = { address, notify, make: message_maker(myaddress) }
-            return { notify: listen, address: myaddress }
-        }
-    }
+    const contacts = protocol_maker('demo', listen)
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
-        inbox[head.join('/')] = msg                  // store msg
         if (type === 'input') console.log({ input: msg.data.value })
     }
 /* ------------------------------------------------
@@ -48,7 +36,7 @@ function demo () {
             // shadow_offset_xy: '4px 4px',
             }
         } 
-    }, make_protocol('text'))
+    }, contacts.add('text'))
 
     // content
     const content = bel`
@@ -223,7 +211,7 @@ body {
 document.body.append(demo())
 // ---------------------------------------------------------------
 
-},{"..":28,"bel":4,"csjs-inject":7,"head":2,"message-maker":24}],2:[function(require,module,exports){
+},{"..":29,"bel":4,"csjs-inject":7,"head":2,"protocol-maker":25}],2:[function(require,module,exports){
 module.exports = head
 
 function head (lang = 'utf8', title = 'Input - DatDot UI') {
@@ -467,7 +455,7 @@ module.exports = hyperx(belCreateElement, {comments: true})
 module.exports.default = module.exports
 module.exports.createElement = belCreateElement
 
-},{"./appendChild":3,"hyperx":26}],5:[function(require,module,exports){
+},{"./appendChild":3,"hyperx":27}],5:[function(require,module,exports){
 (function (global){(function (){
 'use strict';
 
@@ -486,7 +474,7 @@ function csjsInserter() {
 module.exports = csjsInserter;
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"csjs":10,"insert-css":27}],6:[function(require,module,exports){
+},{"csjs":10,"insert-css":28}],6:[function(require,module,exports){
 'use strict';
 
 module.exports = require('csjs/get-css');
@@ -972,6 +960,139 @@ module.exports = function message_maker (from) {
   }
 }
 },{}],25:[function(require,module,exports){
+// const path = require('path')
+// const filename = path.basename(__filename)
+const message_maker = require('message-maker')
+// const message_id = to => (outbox[to] = 1 + (outbox[to]||0))
+
+module.exports = protocol_maker
+
+const routes = {}
+var id = 0
+
+function protocol_maker (type, listen, initial_contacts = {}) {
+  if (!type || typeof type !== 'string') throw new Error('invalid type')
+  const myaddress = id++
+
+  const inbox = {}
+  const outbox = {}
+
+  const by_name = {}
+  const by_address = {}
+  const contacts = { add, by_name, by_address, cut, on }
+  
+  const keys = Object.keys(initial_contacts)
+  for (var i = 0, len = keys.length; i < len; i++) {
+    const name = keys[i]
+    const wire = initial_contacts[name]
+    // @INFO: perspective of sub instance:
+    const { notify, address } = wire(myaddress, wrap_listen(listen))    
+    const contact = {
+      name,
+      address,
+      // path: `${myaddress}/${name}`,
+      notify: wrap_notify(notify),
+      make: message_maker(myaddress)
+    }
+    by_name[name] = by_address[address] = contact // new Promise(resolve => resolve(contact))
+  }
+  return contacts
+  function on (listener) {
+    // @NOTE: to listen to any "default protocol events" supported by any protocol, e.g. help
+    // maybe also: 'connect', or 'disconnect'
+    throw new Error ('`on` is not yet implemented')
+    return function off () {}
+  }
+  function cut (wire) { throw new Error ('`cut` is not yet implemented')}
+  function add (name) {
+    // @INFO: perspective of instance:
+    if (!name || typeof name !== 'string') throw new Error('invalid name')
+    if (by_name[name]) throw new Error('name already exists')
+    const wait = {}
+    by_name[name] = { name, make: message_maker(myaddress) } // new Promise((resolve, reject) => { wait.resolve = resolve; wait.reject = reject })
+    return function wire (address, notify) {
+      const contact = {
+        // @TODO: add queryable "routes" and allow lookup `by_route[route]`       
+        name, // a nickname dev gives to a component
+        address, // an address app makes for each component
+        // TODO: address will become "name" (like type) compared to nickname
+        // address: something new, based on e.g. filepath or browserified bundle.js:22:42 etc.. to give actual globally unique identifier
+        notify: wrap_notify(notify),
+        make: message_maker(myaddress)
+      }
+      // wait.resolve(contact)
+      by_name[name].address = address
+      by_name[name].notify = wrap_notify(notify)
+      by_address[address] = contact // new Promise(resolve => resolve(contact))
+      return { notify: wrap_listen(listen), address: myaddress }
+    }
+  }
+  function wrap_notify (notify) {
+    return message => {
+      outbox[message.head.join('/')] = message  // store message
+      return notify(message)
+    }
+  }
+  function wrap_listen (listen) {
+    return message => {
+      inbox[message.head.join('/')] = message  // store message
+      return listen(message)
+    }
+  }
+}
+/*
+const name_routes = [
+  "root/",
+  "root/el:demo/",
+  "root/el:demo/cpu:range-slider/",
+  "root/el:demo/cpu:range-slider/%:input-number/",
+  "root/el:demo/ram:range-slider/",
+  "root/el:demo/ram:range-slider/GB:input-number/",
+  "root/el:demo/upload:range-slider/",
+  "root/el:demo/upload:range-slider/MB:input-number/",
+  "root/el:demo/download:range-slider/",
+  "root/el:demo/download:range-slider/MB:input-number/",  
+]
+// --------------------------------------------------
+const name_routes = {
+    root: {
+        "el:demo": {
+            "cpu:range-slider": {
+                "%:input-number": {}
+            },
+            "ram:range-slider": {
+                "GB:input-number": {}
+            },
+            "download:range-slider": {
+                "MB:input-number": {}
+            },
+            "upload:range-slider": {
+                "MB:input-number": {}
+            },
+        },
+    },
+}
+// --------------------------------------------------
+const name_routes = {
+    root: {
+        "el": {
+            "cpu": {
+                "%": {}
+            },
+            "ram": {
+                "GB": {}
+            },
+            "download": {
+                "MB": {}
+            },
+            "upload": {
+                "MB": {}
+            },
+        },
+    },
+}
+*/
+},{"message-maker":24}],26:[function(require,module,exports){
 module.exports = attributeToProperty
 
 var transform = {
@@ -992,7 +1113,7 @@ function attributeToProperty (h) {
   }
 }
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 var attrToProp = require('hyperscript-attribute-to-property')
 
 var VAR = 0, TEXT = 1, OPEN = 2, CLOSE = 3, ATTR = 4
@@ -1289,7 +1410,7 @@ var closeRE = RegExp('^(' + [
 ].join('|') + ')(?:[\.#][a-zA-Z0-9\u007F-\uFFFF_:-]+)*$')
 function selfClosing (tag) { return closeRE.test(tag) }
 
-},{"hyperscript-attribute-to-property":25}],27:[function(require,module,exports){
+},{"hyperscript-attribute-to-property":26}],28:[function(require,module,exports){
 var inserted = {};
 
 module.exports = function (css, options) {
@@ -1313,35 +1434,23 @@ module.exports = function (css, options) {
     }
 };
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 const style_sheet = require('support-style-sheet')
-const message_maker = require('message-maker')
+const protocol_maker = require('protocol-maker')
 
 var id = 0
 
 module.exports = i_input
 
-function i_input (opts, protocol) {
+function i_input (opts, parent_wire) {
     const { value = '', maxlength = 50, placeholder = '', theme } = opts
     const status = { }
 
 // --------------------start protocol---------------------
-    const myaddress = `input-text-${id++}` // unique
-    const inbox = {}
-    const outbox = {}
-    const recipients = {}
-    const message_id = to => ( outbox[to] = 1 + (outbox[to]||0) )
-
-    const {notify, address} = protocol(myaddress, listen)
-    recipients['parent'] = { notify, address, make: message_maker(myaddress) }
-
-    const { make } = recipients['parent'] 
-    let message = make({to: address, type: 'ready', ref: { cause: {} }})
-    notify(message)
-
+    const initial_contacts = { 'parent': parent_wire }
+    const contacts = protocol_maker('input-number', listen, initial_contacts)
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // listen to msg
-        inbox[head.join('/')] = msg                  // store msg
         const [from, to, msg_id] = head
     }
 // --------------------end protocol---------------------
@@ -1359,11 +1468,12 @@ function i_input (opts, protocol) {
         // Safari doesn't support onfocus @TODO use select()
         input.onclick = (e) => handle_click(e, input)
         input.onfocus = (e) => handle_focus(e, input)
+        input.onkeydown = (e) => handle_keydown_change(e, input)
         return el
     }
     function set_attributes (el, input) {
         input.type = 'text'
-        input.name = myaddress
+        input.name = 'input-text'
         input.value = value
         input.placeholder = placeholder
 
@@ -1374,14 +1484,22 @@ function i_input (opts, protocol) {
     }
 
     // input click event
-    function handle_click (e, input) {}
+    function handle_click (e, input) {
+        e.target.select()
+    }
     // input focus event
     function handle_focus (e, input) {}
     // input blur event
     function handle_blur (e, input) {
         if (input.value === '') return
-        message = make({to: address, type: 'input', data: { value: input.value }})
-        notify(message)
+        const $parent = contacts.by_name['parent']
+        $parent.notify($parent.make({to: $parent.address, type: 'input', data: { value: input.value }}))
+    }
+    function handle_keydown_change (e, input) {
+        const val = input.value === '' ? 0 : input.value
+        const key = e.key
+        const code = e.keyCode || e.charCode   
+        if (code === 13 || key === 'Enter') input.blur()
     }
 
    // insert CSS style
@@ -1459,7 +1577,7 @@ function i_input (opts, protocol) {
 // ---------------------------------------------------------------
 }
 
-},{"message-maker":24,"support-style-sheet":29}],29:[function(require,module,exports){
+},{"protocol-maker":25,"support-style-sheet":30}],30:[function(require,module,exports){
 module.exports = support_style_sheet
 function support_style_sheet (root, style) {
     return (() => {
