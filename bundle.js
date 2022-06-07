@@ -17,32 +17,66 @@ function demo () {
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
-        if (type === 'input') console.log({ input: msg.data.value })
+        const $from = contacts.by_address[from]
+        if (type === 'onblur') {
+            console.log({ input: msg.data.value })
+            if (data.value === 'foo') {
+                const new_theme = `input { background-color: red; }`
+                if (contacts.by_address[from].name === 'input-1') sheets = [0, 1, new_theme]
+                else sheets = [0, new_theme]
+                $from.notify($from.make({ to: $from.address, type: 'help' }))
+                $from.notify($from.make({ to: $from.address, type: 'update', data: { sheets } }))
+            } else {
+                if (contacts.by_address[from].name === 'input-1') sheets = [0, 1]
+                else sheets = [0]
+                $from.notify($from.make({ to: $from.address, type: 'update', data: { sheets } }))  
+            }
+        }
+        if (type === 'help') { console.log('Help reponse - current state', data) }
     }
 /* ------------------------------------------------
                     </protocol>
 ------------------------------------------------ */
 
-    const text = input_text({
-        value: 'default value', 
-        placeholder: 'type your text here', 
-        theme: { 
-            props: {
-            // border_width: '2px',
-            // border_color: 'var(--color-blue)',
-            // border_style: 'dashed',
-            // shadow_color: 'var(--color-blue)',
-            // shadow_opacity: '.65',
-            // shadow_offset_xy: '4px 4px',
+    console.log('Default opts for input-text', input_text.help())
+
+    const input_1 = input_text({
+        placeholder: 'enter your name', 
+        theme: ``
+    }, contacts.add(`input-${count++}`))
+
+    const input_2 = input_text({
+        placeholder: 'enter your last name', 
+        theme: `
+        :host(input-text) {
+            --color-blue: 214, 100%, 49%;
+            --border-width: 2px;
+            --border-color: var(--color-blue);
+            --border-style: dashed;
+            --border: var(--border-width) var(--border-style) hsla(var(--border-color), var(--border-opacity));
+            --shadow-color: var(--color-blue);
+            --shadow-opacity: .3;
+            --shadow-xy: 4px 4px;
+        }
+            input {
+                border: var(--border);
+                border-radius: var(--border-radius);
+                background-color: pink;
             }
-        } 
-    }, contacts.add('text'))
+            input:focus {
+                box-shadow: var(--shadow-xy) var(--shadow-blur) hsla(var(--shadow-color), var(--shadow-opacity));
+
+            }
+        `
+    }, contacts.add(`input-${count++}`))
 
     // content
     const content = bel`
         <div class=${css.content}>
-            <section> <h2>Input text</h2> ${text} </section>
+            <section> <h2>First name</h2> ${input_1} </section>
+            <section> <h2>Last name</h2> ${input_2} </section>
         </div>`
+    
     const container = bel`<div class="${css.container}">${content}</div>`
     const app = bel`<div class="${css.wrap}" data-state="debug"> ${container} </div>`
     return app
@@ -1439,144 +1473,188 @@ const style_sheet = require('support-style-sheet')
 const protocol_maker = require('protocol-maker')
 
 var id = 0
-
-module.exports = i_input
-
-function i_input (opts, parent_wire) {
-    const { value = '', maxlength = 50, placeholder = '', theme } = opts
-    const status = { }
-
-// --------------------start protocol---------------------
-    const initial_contacts = { 'parent': parent_wire }
-    const contacts = protocol_maker('input-number', listen, initial_contacts)
-    function listen (msg) {
-        const { head, refs, type, data, meta } = msg // listen to msg
-        const [from, to, msg_id] = head
-    }
-// --------------------end protocol---------------------
-
-    const make_element = () => {
-        const el = document.createElement('input-text')
-        const shadow = el.attachShadow({mode: 'closed'})
-        const input = document.createElement('input')
-        set_attributes(el, input)
-        style_sheet(shadow, style)
-        shadow.append(input)
-        // handle events go here
-        input.onwheel = (e) => e.preventDefault()
-        input.onblur = (e) => handle_blur(e, input) // when element loses focus
-        // Safari doesn't support onfocus @TODO use select()
-        input.onclick = (e) => handle_click(e, input)
-        input.onfocus = (e) => handle_focus(e, input)
-        input.onkeydown = (e) => handle_keydown_change(e, input)
-        return el
-    }
-    function set_attributes (el, input) {
-        input.type = 'text'
-        input.name = 'input-text'
-        input.value = value
-        input.placeholder = placeholder
-
-        // properties
-        input.setAttribute('aria-myaddress', 'input')
-        if (status.is_disabled) el.setAttribute('disabled', status.is_disabled)
-        input.setAttribute('maxlength', maxlength)
-    }
-
-    // input click event
-    function handle_click (e, input) {
-        e.target.select()
-    }
-    // input focus event
-    function handle_focus (e, input) {}
-    // input blur event
-    function handle_blur (e, input) {
-        if (input.value === '') return
-        const $parent = contacts.by_name['parent']
-        $parent.notify($parent.make({to: $parent.address, type: 'input', data: { value: input.value }}))
-    }
-    function handle_keydown_change (e, input) {
-        const val = input.value === '' ? 0 : input.value
-        const key = e.key
-        const code = e.keyCode || e.charCode   
-        if (code === 13 || key === 'Enter') input.blur()
-    }
-
-   // insert CSS style
-   const custom_style = theme ? theme.style : ''
-   // set CSS variables
-   if (theme && theme.props) {
-       var {size, size_hover, current_size,
-           weight, weight_hover, current_weight,
-           color, color_hover, current_color, current_bg_color, 
-           bg_color, bg_color_hover, border_color_hover,
-           border_width, border_style, border_opacity, border_color, border_radius, 
-           padding, width, height, opacity,
-           fill, fill_hover, icon_size, current_fill,
-           shadow_color, shadow_offset_xy, shadow_blur, shadow_opacity,
-           shadow_color_hover, shadow_offset_xy_hover, blur_hover, shadow_opacity_hover
-       } = theme.props
-   }
-
-// ---------------------------------------------------------------
-    const style = `
-    :host(input-text) {
-        --size: ${size ? size : 'var(--size14)'};
-        --size-hover: ${size_hover ? size_hover : 'var(--size)'};
-        --current-size: ${current_size ? current_size : 'var(--size)'};
-        --bold: ${weight ? weight : 'normal'};
-        --color: ${color ? color : 'var(--primary-color)'};
-        --bg-color: ${bg_color ? bg_color : 'var(--color-white)'};
-        --width: ${width ? width : 'unset'};
-        --height: ${height ? height : '32px'};
-        --opacity: ${opacity ? opacity : '1'};
-        --padding: ${padding ? padding : '8px 12px'};
-        --border-width: ${border_width ? border_width : '0px'};
-        --border-style: ${border_style ? border_style : 'solid'};
-        --border-color: ${border_color ? border_color : 'var(--primary-color)'};
-        --border-opacity: ${border_opacity ? border_opacity : '1'};
-        --border: var(--border-width) var(--border-style) hsla( var(--border-color), var(--border-opacity) );
-        --border-radius: ${border_radius ? border_radius : 'var(--primary-button-radius)'};
-        --fill: ${fill ? fill : 'var(--primary-color)'};
-        --fill-hover: ${fill_hover ? fill_hover : 'var(--color-white)'};
-        --icon-size: ${icon_size ? icon_size : '16px'};
-        --shadow-xy: ${shadow_offset_xy ? shadow_offset_xy : '0 0'};
-        --shadow-blur: ${shadow_blur ? shadow_blur : '8px'};
-        --shadow-color: ${shadow_color ? shadow_color : 'var(--color-black)'};
-        --shadow-opacity: ${shadow_opacity ? shadow_opacity : '0.25'};
-        ${width && 'width: var(--width)'};
-        height: var(--height);
-        max-width: 100%;
-        display: grid;
-        --shadow-opacity: 0;
-    }
-    [type = 'text'] {
-        text-align: left;
-        align-items: center;
-        font-size: var(--size);
-        font-weight: var(--bold);
-        color: hsl( var(--color) );
-        background-color: hsla( var(--bg-color), var(--opacity) );
-        border: var(--border);
-        border-radius: var(--border-radius);
-        padding: var(--padding);
-        transition: font-size .3s, color .3s, background-color .3s, box-shadow .3s ease-in-out;
-        outline: none;
-        box-shadow: var(--shadow-xy) var(--shadow-blur) hsla( var(--shadow-color), var(--shadow-opacity));
-        -moz-appearance: textfield;
-    }
-    :focus {
-        --shadow-opacity: ${shadow_opacity ? shadow_opacity : '.3'};
-        font-size: var(--current-size);
-    }
-    ${custom_style}
-    `
-    const element = make_element()
-// ---------------------------------------------------------------
-    return element
-// ---------------------------------------------------------------
+const sheet = new CSSStyleSheet()
+const default_opts = { 
+	name: 'input-text',
+	value: '',
+	maxlength: 50, 
+	placeholder: '',
+	status: {
+		current: false, 
+		disabled: false,
+	},
+	theme: get_theme()
 }
+sheet.replaceSync(default_opts.theme)
 
+
+module.exports = input_text
+
+input_text.help = () => { return { opts: default_opts } }
+
+function input_text (opts, parent_wire) {
+	const { 
+		name = default_opts.name,
+		value = default_opts.value, 
+		maxlength = default_opts.maxlength, 
+		placeholder = default_opts.placeholder,
+		status = default_opts.status, 
+		theme = `` } = opts
+	
+
+	const current_state = { opts: { name, value, maxlength, placeholder, status, sheets: [default_opts.theme, theme] } }
+	
+	// protocol		 
+	const initial_contacts = { 'parent': parent_wire }
+	const contacts = protocol_maker('input-number', listen, initial_contacts)
+	function listen (msg) {
+			const { head, refs, type, data, meta } = msg // listen to msg
+			const [from, to, msg_id] = head
+			const $from = contacts.by_address[from]
+			if (type === 'help') {
+				$from.notify($from.make({ to: $from.address, type: 'help', data: { state: get_current_state() }, refs: { cause: head }}))
+		}
+			if (type === 'update') handle_update(data)
+	}
+
+	// make input text
+	const el = document.createElement('input-text')
+	const shadow = el.attachShadow({mode: 'closed'})
+	const input = document.createElement('input')
+
+	input.type = 'text'
+	input.name = name
+	input.value = value
+	input.placeholder = placeholder
+	input.setAttribute('aria-label', name)
+	input.setAttribute('maxlength', maxlength)
+	if (current_state.opts.status.disabled) el.setAttribute('disabled', current_state.opts.status.disabled)
+
+	const custom_theme = new CSSStyleSheet()
+	custom_theme.replaceSync(theme)
+	shadow.adoptedStyleSheets = [sheet, custom_theme]
+
+	shadow.append(input)
+
+	// event listeners
+	/* input.onwheel = (e) => e.preventDefault() */
+	input.onblur = (e) => handle_blur(e, input) // when element loses focus
+	// Safari doesn't support onfocus @TODO use select()
+	input.onclick = (e) => handle_click(e, input)
+	input.onfocus = (e) => handle_focus(e, input)
+	input.onkeydown = (e) => handle_keydown_change(e, input)
+
+	return el
+
+	// event handlers
+	function handle_click (e, input) {
+			e.target.select()
+	}
+	function handle_focus (e, input) {}
+	function handle_blur (e, input) {
+			if (input.value === '') return
+			const $parent = contacts.by_name['parent']
+			$parent.notify($parent.make({to: $parent.address, type: 'onblur', data: { value: input.value }}))
+		}
+		function handle_keydown_change (e, input) {
+			const val = input.value === '' ? 0 : input.value
+			const key = e.key
+			const code = e.keyCode || e.charCode   
+			current_state.opts.value = val
+			if (code === 13 || key === 'Enter') input.blur()
+	}
+	function handle_update (data) {
+		const { value, maxlength, placeholder, sheets } = data
+		if (value) {
+			current_state.opts.value = data.value
+			input.value = current_state.opts.value
+		}
+		if (sheets) {
+			const new_sheets = sheets.map(sheet => {
+				if (typeof sheet === 'string') {
+					current_state.opts.sheets.push(sheet)
+					const new_sheet = new CSSStyleSheet()
+					new_sheet.replaceSync(sheet)
+					return new_sheet
+					} 
+					if (typeof sheet === 'number') return shadow.adoptedStyleSheets[sheet]
+			})
+			shadow.adoptedStyleSheets = new_sheets
+		}
+	}
+
+	// get current state
+	function get_current_state () {
+		return  {
+			opts: current_state.opts,
+			contacts
+		}
+	}
+}
+function get_theme () {
+	return `
+	:host(input-text) {
+		--b: 0, 0%;
+		--r: 100%, 50%;
+		--color-white: var(--b); 100%;
+		--color-black: var(--b); 0%;
+		--color-blue: 214, var(--r);
+		--size14: 1.4rem;
+		--size16: 1.6rem;
+		--weight200: 200;
+		--weight800: 800;
+		--primary-color: var(--color-black);
+		--primary-button-radius: 8px;
+		--primary-bg-color: var(--color-white);
+		--primary-color-hover: var(--color-black);
+		--size: var(--size14);
+		--size-hover: var(--size);
+		--current-size: var(--size);
+		--bold: var(--weight800);
+		--color: var(--primary-color);
+		--bg-color: var(--primary-bg-color);
+		--width: unset;
+		--height: 32px;
+		--opacity: 1;
+		--padding: 8px 12px;
+		--border-width: 1px;
+		--border-style: solid;
+		--border-color: var(--primary-color);
+		--border-opacity: 1;
+		--border-radius: var(--primary-button-radius);
+		--border: var(--border-width) var(--border-style) hsla(var(--border-color), var(--border-opacity));
+		--fill: var(--primary-color);
+		--fill-hover: var(--color-white);
+		--icon-size: var(--size16);
+		--shadow-xy: 4px 4px;
+		--shadow-blur: 8px;
+		--shadow-color: var(--b), 0%;
+		--shadow-opacity: 0;
+		--shadow-opacity-focus: .65;
+		max-width: 100%;
+    display: grid;
+	}
+	input {
+		border: var(--border);
+		border-radius: var(--border-radius);
+		width: var(--width);
+		height: var(--height);
+		max-width: 100%;
+		text-align: left;
+		align-items: center;
+		font-size: var(--size);
+		font-weight: var(--bold);
+		color: hsl( var(--color) );
+		padding: var(--padding);
+		transition: font-size .3s, color .3s, background-color .3s, box-shadow .3s ease-in-out;
+		outline: none;
+		-moz-appearance: textfield;
+	}
+	:focus {
+		--shadow-opacity: var(--shadow-opacity-focus);
+		box-shadow: var(--shadow-xy) var(--shadow-blur) hsla( var(--shadow-color), var(--shadow-opacity));
+	}`
+}
 },{"protocol-maker":25,"support-style-sheet":30}],30:[function(require,module,exports){
 module.exports = support_style_sheet
 function support_style_sheet (root, style) {

@@ -16,32 +16,66 @@ function demo () {
     function listen (msg) {
         const { head, refs, type, data, meta } = msg // receive msg
         const [from, to, msg_id] = head
-        if (type === 'input') console.log({ input: msg.data.value })
+        const $from = contacts.by_address[from]
+        if (type === 'onblur') {
+            console.log({ input: msg.data.value })
+            if (data.value === 'foo') {
+                const new_theme = `input { background-color: red; }`
+                if (contacts.by_address[from].name === 'input-1') sheets = [0, 1, new_theme]
+                else sheets = [0, new_theme]
+                $from.notify($from.make({ to: $from.address, type: 'help' }))
+                $from.notify($from.make({ to: $from.address, type: 'update', data: { sheets } }))
+            } else {
+                if (contacts.by_address[from].name === 'input-1') sheets = [0, 1]
+                else sheets = [0]
+                $from.notify($from.make({ to: $from.address, type: 'update', data: { sheets } }))  
+            }
+        }
+        if (type === 'help') { console.log('Help reponse - current state', data) }
     }
 /* ------------------------------------------------
                     </protocol>
 ------------------------------------------------ */
 
-    const text = input_text({
-        value: 'default value', 
-        placeholder: 'type your text here', 
-        theme: { 
-            props: {
-            // border_width: '2px',
-            // border_color: 'var(--color-blue)',
-            // border_style: 'dashed',
-            // shadow_color: 'var(--color-blue)',
-            // shadow_opacity: '.65',
-            // shadow_offset_xy: '4px 4px',
+    console.log('Default opts for input-text', input_text.help())
+
+    const input_1 = input_text({
+        placeholder: 'enter your name', 
+        theme: ``
+    }, contacts.add(`input-${count++}`))
+
+    const input_2 = input_text({
+        placeholder: 'enter your last name', 
+        theme: `
+        :host(input-text) {
+            --color-blue: 214, 100%, 49%;
+            --border-width: 2px;
+            --border-color: var(--color-blue);
+            --border-style: dashed;
+            --border: var(--border-width) var(--border-style) hsla(var(--border-color), var(--border-opacity));
+            --shadow-color: var(--color-blue);
+            --shadow-opacity: .3;
+            --shadow-xy: 4px 4px;
+        }
+            input {
+                border: var(--border);
+                border-radius: var(--border-radius);
+                background-color: pink;
             }
-        } 
-    }, contacts.add('text'))
+            input:focus {
+                box-shadow: var(--shadow-xy) var(--shadow-blur) hsla(var(--shadow-color), var(--shadow-opacity));
+
+            }
+        `
+    }, contacts.add(`input-${count++}`))
 
     // content
     const content = bel`
         <div class=${css.content}>
-            <section> <h2>Input text</h2> ${text} </section>
+            <section> <h2>First name</h2> ${input_1} </section>
+            <section> <h2>Last name</h2> ${input_2} </section>
         </div>`
+    
     const container = bel`<div class="${css.container}">${content}</div>`
     const app = bel`<div class="${css.wrap}" data-state="debug"> ${container} </div>`
     return app
